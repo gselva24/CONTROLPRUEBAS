@@ -169,8 +169,8 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Categoria:</label>
-                            <input type="text" id="b-categoria-nueva" placeholder="Empaque" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Tipo de insumo:</label>
+                            <input type="text" id="b-categoria-nueva" placeholder="Material de empaque, EPP, limpieza" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Unidad:</label>
@@ -360,7 +360,14 @@
 
         function saveLoteFrutas() {
             const nombre = document.getElementById('f-nombre').value;
+            const pesoEntrada = Number(document.getElementById('f-peso-in').value);
+            const salidaSesionActual = Number(document.getElementById('f-peso-dinamico-input').value);
+            const estadoFrutas = document.getElementById('f-estado-cierre').value;
             if (!nombre) { alert("⚠️ Por favor, ingrese el nombre del pedido o cliente."); return; }
+            if (!startTime) { alert("Inicie el proceso antes de guardar el registro."); return; }
+            if (!pesoEntrada || pesoEntrada <= 0) { alert("Ingrese un peso de entrada mayor a cero."); return; }
+            if (!salidaSesionActual || salidaSesionActual <= 0) { alert("Ingrese las libras procesadas en esta sesión."); return; }
+            if (salidaSesionActual > pesoEntrada * 1.2) { alert("Revise el peso procesado: supera demasiado el peso de entrada."); return; }
 
             const payload = {
                 action: "registroFrutas",
@@ -368,11 +375,11 @@
                 idPedido: document.getElementById('f-pedido-parcial-select').value,
                 nombrePedido: nombre,
                 frutaTipo: document.getElementById('f-fruta').value,
-                pesoEntrada: document.getElementById('f-peso-in').value,
-                pesoSalida: document.getElementById('f-estado-cierre').value === "Proceso Completo" ? document.getElementById('f-peso-dinamico-input').value : 0,
-                salidaSesionActual: document.getElementById('f-peso-dinamico-input').value,
-                estadoFrutas: document.getElementById('f-estado-cierre').value,
-                pesoParcial: document.getElementById('f-peso-dinamico-input').value,
+                pesoEntrada: pesoEntrada,
+                pesoSalida: estadoFrutas === "Proceso Completo" ? salidaSesionActual : 0,
+                salidaSesionActual: salidaSesionActual,
+                estadoFrutas: estadoFrutas,
+                pesoParcial: salidaSesionActual,
                 fecha: new Date().toLocaleDateString('es-ES'),
                 start: startTime.toLocaleTimeString('es-ES'),
                 end: new Date().toLocaleTimeString('es-ES'),
@@ -464,6 +471,8 @@
             bodegaNuevoMode = mode;
             document.getElementById('b-existing-fields').classList.toggle('hidden', mode);
             document.getElementById('b-new-fields').classList.toggle('hidden', !mode);
+            document.getElementById('b-tipo-movimiento').value = mode ? "Entrada" : document.getElementById('b-tipo-movimiento').value;
+            document.getElementById('b-tipo-movimiento').disabled = mode;
             document.getElementById('b-mode-new-btn').className = mode
                 ? "flex-1 py-2 rounded-lg font-bold bg-cyan-600 text-white"
                 : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
@@ -509,7 +518,7 @@
                         <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-xl p-3">
                             <div>
                                 <span class="block font-black text-slate-100">${i.nombre}</span>
-                                <span class="block text-[10px] text-slate-500">${i.categoria || 'Sin categoria'}</span>
+                                <span class="block text-[10px] text-slate-500">${i.categoria || 'Sin tipo de insumo'}</span>
                             </div>
                             <div class="text-right">
                                 <span class="block font-black text-cyan-300">${i.stock}</span>
@@ -699,3 +708,4 @@
     </script>
 </body>
 </html>
+
