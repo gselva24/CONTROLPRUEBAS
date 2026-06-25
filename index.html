@@ -260,7 +260,8 @@
 
         function fetchDataFromCloud() {
             document.getElementById('global-status').innerText = "⏳ Sincronizando...";
-            fetch(GOOGLE_SHEETS_URL, { redirect: "follow" })
+            const cacheBust = GOOGLE_SHEETS_URL.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
+            fetch(`${GOOGLE_SHEETS_URL}${cacheBust}`, { redirect: "follow" })
             .then(res => res.json())
             .then(data => {
                 frutasCatalog = data.frutas || [];
@@ -277,6 +278,13 @@
                 renderMobileHistory(); 
                 renderGerenteLoteSelect();
                 
+                const historialSinMetricas = historialCompleto.some(p => typeof p.pesoProcesado === "undefined" || typeof p.cajasProcesadas === "undefined");
+                if (historialSinMetricas) {
+                    document.getElementById('global-status').innerText = "Script sin metricas V2";
+                    document.getElementById('global-status').className = "text-[10px] text-amber-400 font-medium italic";
+                    return;
+                }
+
                 document.getElementById('global-status').innerText = "✅ Sincronizado";
                 document.getElementById('global-status').className = "text-[10px] text-emerald-400 font-medium italic";
             })
