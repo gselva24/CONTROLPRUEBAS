@@ -66,8 +66,8 @@
                         <select id="f-pedido-parcial-select" onchange="autoFillRetomado()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none text-amber-200"></select>
                         <div id="f-lote-info" class="hidden mt-3 bg-slate-900/70 border border-slate-700 rounded-xl p-3 text-xs space-y-1"></div>
                         <div class="grid grid-cols-2 gap-2 mt-3">
-                            <button onclick="pausarLoteFrutas()" class="bg-amber-500 text-slate-900 font-black py-3 rounded-xl text-xs uppercase">Pausar</button>
-                            <button onclick="retomarLoteFrutas()" class="bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Retomar</button>
+                            <button id="btn-pausar-lote" onclick="pausarLoteFrutas()" class="bg-amber-500 text-slate-900 font-black py-3 rounded-xl text-xs uppercase hidden">Pausar</button>
+                            <button id="btn-retomar-lote" onclick="retomarLoteFrutas()" class="bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase hidden">Retomar</button>
                         </div>
                     </div>
 
@@ -91,7 +91,7 @@
                         <input type="number" id="f-peso-in" placeholder="0.00" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                     </div>
                     
-                    <div class="pt-4 text-center">
+                    <div id="f-iniciar-actions" class="pt-4 text-center">
                         <span id="chrono-display" class="text-5xl font-mono font-black text-emerald-400 hidden mb-4">00:00:00</span>
                         <button id="btn-start" onclick="iniciarLoteFrutas()" class="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-xs uppercase shadow-lg shadow-emerald-900/30">Iniciar y guardar lote</button>
                         <button id="btn-stop" onclick="stopTimer()" class="w-full bg-rose-600 text-white font-black py-4 rounded-xl text-xs uppercase hidden shadow-lg shadow-rose-900/30">Detener Cronómetro</button>
@@ -547,6 +547,53 @@
                 pesoDesecho: pesoDesecho,
                 notaFinal: document.getElementById('f-nota-final').value.trim()
             }, "Lote finalizado.");
+        }
+
+        function setFrutasMode(mode) {
+            isRetomadoMode = mode;
+            const gestionando = Boolean(mode);
+            document.getElementById('f-grupo-manual-inputs').classList.toggle('hidden', gestionando);
+            document.getElementById('f-container-retomar').classList.toggle('hidden', !gestionando);
+            document.getElementById('f-iniciar-actions').classList.toggle('hidden', gestionando);
+            document.getElementById('f-peso-in').disabled = gestionando;
+            document.getElementById('f-peso-in').classList.toggle('opacity-50', gestionando);
+            document.getElementById('f-step-2').classList.toggle('hidden', !gestionando);
+            document.getElementById('mode-new-btn').className = gestionando
+                ? "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300"
+                : "flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white";
+            document.getElementById('mode-resume-btn').className = gestionando
+                ? "flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white"
+                : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
+            actualizarAccionesFrutas(null);
+        }
+
+        function actualizarAccionesFrutas(lote) {
+            const btnPausar = document.getElementById('btn-pausar-lote');
+            const btnRetomar = document.getElementById('btn-retomar-lote');
+            btnPausar.classList.add('hidden');
+            btnRetomar.classList.add('hidden');
+            if (!lote) return;
+            if (lote.estadoFrutas === "En proceso") btnPausar.classList.remove('hidden');
+            if (lote.estadoFrutas === "Pausado") btnRetomar.classList.remove('hidden');
+        }
+
+        function autoFillRetomado() {
+            const val = document.getElementById('f-pedido-parcial-select').value;
+            const lote = pedidosParciales.find(p => p.id === val);
+            const info = document.getElementById('f-lote-info');
+            actualizarAccionesFrutas(lote);
+            if(lote) {
+                document.getElementById('f-nombre').value = lote.nombre;
+                document.getElementById('f-fruta').value = lote.fruta;
+                document.getElementById('f-peso-in').value = lote.pesoEntrada;
+                info.innerHTML = `
+                    <div><span class="text-slate-400">Estado:</span> <span class="font-black text-amber-300">${lote.estadoFrutas}</span></div>
+                    <div><span class="text-slate-400">Entrada:</span> <span class="font-bold">${lote.pesoEntrada} lb</span></div>
+                    <div><span class="text-slate-400">Proveedor:</span> <span class="font-bold">${lote.proveedorIniciales || '-'}</span></div>`;
+                info.classList.remove('hidden');
+            } else {
+                info.classList.add('hidden');
+            }
         }
 
         function renderEmpaqueSelect() {
