@@ -18,7 +18,7 @@
         window.addEventListener('DOMContentLoaded', () => { fetchDataFromCloud(); switchView('home'); });
 
         function fetchDataFromCloud() {
-            document.getElementById('global-status').innerText = "â³ Sincronizando...";
+            document.getElementById('global-status').innerText = "⏳ Sincronizando...";
             const cacheBust = GOOGLE_SHEETS_URL.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
             fetch(`${GOOGLE_SHEETS_URL}${cacheBust}`, { redirect: "follow" })
             .then(res => res.json())
@@ -44,12 +44,12 @@
                     return;
                 }
 
-                document.getElementById('global-status').innerText = "âœ… Sincronizado";
+                document.getElementById('global-status').innerText = "✅ Sincronizado";
                 document.getElementById('global-status').className = "text-[10px] text-emerald-400 font-medium italic";
             })
             .catch(err => {
-                console.error("Error de conexiÃ³n GET:", err);
-                document.getElementById('global-status').innerText = "âŒ Error conexiÃ³n";
+                console.error("Error de conexión GET:", err);
+                document.getElementById('global-status').innerText = "❌ Error conexión";
                 document.getElementById('global-status').className = "text-[10px] text-rose-400 font-medium italic";
             });
         }
@@ -217,7 +217,7 @@
             const lote = pedidosPendientes.find(p => p.id === idPed);
             const cajas = document.getElementById('e-cajas').value;
             
-            if(!lote || !cajas) { alert("âš ï¸ Seleccione un lote y asigne una cantidad de cajas."); return; }
+            if(!lote || !cajas) { alert("⚠️ Seleccione un lote y asigne una cantidad de cajas."); return; }
 
             const payload = {
                 action: "registroEmpaque",
@@ -229,7 +229,7 @@
                 estadoEmpaque: document.getElementById('e-estado-cierre').value
             };
             
-            document.getElementById('global-status').innerText = "â³ Guardando Empaque...";
+            document.getElementById('global-status').innerText = "⏳ Guardando Empaque...";
             
             fetch(GOOGLE_SHEETS_URL, { 
                 method: "POST", 
@@ -239,9 +239,9 @@
             .then(res => res.json())
             .then(resData => { 
                 if(resData && resData.status === "error") {
-                    alert("âŒ " + resData.message);
+                    alert("❌ " + resData.message);
                 } else {
-                    alert("âœ… Â¡Empaque registrado exitosamente!"); 
+                    alert("✅ ¡Empaque registrado exitosamente!"); 
                     document.getElementById('e-cajas').value = "";
                     document.getElementById('e-pedido-select').value = "";
                     document.getElementById('e-info-box').classList.add('hidden');
@@ -249,7 +249,7 @@
                     switchView('historial'); 
                 }
             })
-            .catch(err => { console.error(err); alert("âŒ Error al guardar empaque."); });
+            .catch(err => { console.error(err); alert("❌ Error al guardar empaque."); });
         }
 
         function setBodegaMode(mode) {
@@ -357,7 +357,7 @@
             .then(res => res.json())
             .then(resData => {
                 if (resData && resData.status === "error") {
-                    alert("âŒ " + resData.message);
+                    alert("❌ " + resData.message);
                 } else {
                     alert("Movimiento de bodega guardado.");
                     resetBodegaForm();
@@ -411,11 +411,11 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3 pt-1">
                         <div class="${frutaEstilos.bg} border ${frutaEstilos.border} p-2.5 rounded-xl text-center">
-                            <span class="block text-[9px] uppercase font-black tracking-wider ${frutaEstilos.text} mb-1">ðŸ“ Frutas</span>
+                            <span class="block text-[9px] uppercase font-black tracking-wider ${frutaEstilos.text} mb-1">🍓 Frutas</span>
                             <span class="font-bold ${frutaEstilos.lightText}">${p.estadoFrutas}</span>
                         </div>
                         <div class="${empaqueEstilos.bg} border ${empaqueEstilos.border} p-2.5 rounded-xl text-center">
-                            <span class="block text-[9px] uppercase font-black tracking-wider ${empaqueEstilos.text} mb-1">ðŸ“¦ Empaque</span>
+                            <span class="block text-[9px] uppercase font-black tracking-wider ${empaqueEstilos.text} mb-1">📦 Empaque</span>
                             <span class="font-bold ${empaqueEstilos.lightText}">${p.estadoEmpaqueGlobal}</span>
                         </div>
                     </div>`;
@@ -429,10 +429,10 @@
                 document.getElementById('g-box-catalogo').classList.add('hidden');
                 document.getElementById('g-box-gestion-ordenes').classList.add('hidden');
                 document.getElementById('chrono-display').classList.add('hidden'); 
-                document.getElementById('admin-toggle-btn').innerText = "ðŸ”‘ Gerente";
+                document.getElementById('admin-toggle-btn').innerText = "🔑 Gerente";
                 document.getElementById('admin-toggle-btn').classList.replace('bg-rose-600', 'bg-slate-700');
             } else {
-                let pass = prompt("Ingrese contraseÃ±a de Gerente:");
+                let pass = prompt("Ingrese contraseña de Gerente:");
                 if (pass === GERENTE_PASSWORD) {
                     isAdmin = true;
                     document.getElementById('g-box-catalogo').classList.remove('hidden');
@@ -442,10 +442,10 @@
                         document.getElementById('chrono-display').classList.remove('hidden');
                     }
                     
-                    document.getElementById('admin-toggle-btn').innerText = "ðŸ”’ Cerrar";
+                    document.getElementById('admin-toggle-btn').innerText = "🔒 Cerrar";
                     document.getElementById('admin-toggle-btn').classList.replace('bg-slate-700', 'bg-rose-600');
                     renderCatalog();
-                } else { alert("ContraseÃ±a incorrecta."); }
+                } else { alert("Contraseña incorrecta."); }
             }
         }
 
@@ -486,7 +486,7 @@
         }
 
         function gerenteOcultarLoteApp() { 
-            if(confirm("Â¿Ocultar este lote de la App? (SeguirÃ¡ en el Excel)")) {
+            if(confirm("¿Ocultar este lote de la App? (Seguirá en el Excel)")) {
                 fetch(GOOGLE_SHEETS_URL, {
                     method:"POST", 
                     headers: { "Content-Type": "text/plain;charset=utf-8" }, 
@@ -496,7 +496,7 @@
         }
 
         function gerenteBorrarLoteTotal() { 
-            if(confirm("Â¡Peligro! Â¿Borrar este lote de todas las pestaÃ±as de la base de datos?")) {
+            if(confirm("¡Peligro! ¿Borrar este lote de todas las pestañas de la base de datos?")) {
                 fetch(GOOGLE_SHEETS_URL, {
                     method:"POST", 
                     headers: { "Content-Type": "text/plain;charset=utf-8" }, 
@@ -504,4 +504,5 @@
                 }).then(()=>fetchDataFromCloud()); 
             }
         }
+
 

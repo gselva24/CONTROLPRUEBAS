@@ -15,24 +15,24 @@
             <p id="global-status" class="text-[10px] text-amber-400 font-medium italic">Sincronizando con la nube...</p>
         </div>
         <button id="admin-toggle-btn" onclick="promptAdmin()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-xl font-bold border border-slate-600 transition">
-            ðŸ”‘ Gerente
+            🔑 Gerente
         </button>
     </header>
 
     <main class="max-w-2xl mx-auto p-4 space-y-6">
 
         <section id="view-home" class="app-view space-y-4 text-center py-6">
-            <h2 class="text-2xl font-black text-indigo-400 mb-6">Seleccione su Ãrea</h2>
+            <h2 class="text-2xl font-black text-indigo-400 mb-6">Seleccione su Área</h2>
             <div class="grid grid-cols-1 gap-4 max-w-sm mx-auto">
                 <button onclick="switchView('frutas')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
-                    <span class="text-3xl">ðŸ“</span>
-                    <div class="text-left"><span class="block font-black text-lg">Ãrea de Frutas</span></div>
-                    <span class="text-slate-500 font-bold">âž”</span>
+                    <span class="text-3xl">🍓</span>
+                    <div class="text-left"><span class="block font-black text-lg">Área de Frutas</span></div>
+                    <span class="text-slate-500 font-bold">➔</span>
                 </button>
                 <button onclick="switchView('empaque')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
-                    <span class="text-3xl">ðŸ“¦</span>
-                    <div class="text-left"><span class="block font-black text-lg">Ãrea de Empaque</span></div>
-                    <span class="text-slate-500 font-bold">âž”</span>
+                    <span class="text-3xl">📦</span>
+                    <div class="text-left"><span class="block font-black text-lg">Área de Empaque</span></div>
+                    <span class="text-slate-500 font-bold">➔</span>
                 </button>
                 <button onclick="switchView('bodega')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
                     <span class="text-xl font-black text-cyan-400">INV</span>
@@ -40,17 +40,17 @@
                     <span class="text-slate-500 font-bold">></span>
                 </button>
                 <button onclick="switchView('historial')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
-                    <span class="text-3xl">ðŸ“‹</span>
+                    <span class="text-3xl">📋</span>
                     <div class="text-left"><span class="block font-black text-lg">Trazabilidad</span></div>
-                    <span class="text-slate-500 font-bold">âž”</span>
+                    <span class="text-slate-500 font-bold">➔</span>
                 </button>
             </div>
         </section>
 
         <section id="view-frutas" class="app-view hidden space-y-4">
             <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
-                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold mb-2 flex items-center gap-1 hover:underline">â¬… Volver</button>
-                <h2 class="text-lg font-extrabold text-indigo-400 flex items-center gap-2">ðŸ“ Ãrea de Frutas</h2>
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold mb-2 flex items-center gap-1 hover:underline">⬅ Volver</button>
+                <h2 class="text-lg font-extrabold text-indigo-400 flex items-center gap-2">🍓 Área de Frutas</h2>
                 
                 <div class="bg-slate-900/60 p-2 rounded-xl flex gap-2 text-xs">
                     <button id="mode-new-btn" onclick="setFrutasMode(false)" class="flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white">Iniciar lote</button>
@@ -104,10 +104,10 @@
             </div>
             
             <div id="g-box-catalogo" class="hidden bg-slate-800 p-5 rounded-2xl border border-amber-500/30 space-y-3">
-                <h3 class="text-xs font-black text-amber-400 uppercase">âš™ï¸ CatÃ¡logo (Gerente)</h3>
+                <h3 class="text-xs font-black text-amber-400 uppercase">⚙️ Catálogo (Gerente)</h3>
                 <div class="flex gap-2">
                     <input type="text" id="new-fruta-input" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs">
-                    <button onclick="addFrutaCatalog()" class="bg-amber-500 text-slate-900 font-bold px-4 rounded-xl text-xs">AÃ±adir</button>
+                    <button onclick="addFrutaCatalog()" class="bg-amber-500 text-slate-900 font-bold px-4 rounded-xl text-xs">Añadir</button>
                 </div>
                 <ul id="catalog-list" class="space-y-1 text-xs"></ul>
             </div>
@@ -115,8 +115,8 @@
 
         <section id="view-empaque" class="app-view hidden space-y-4">
             <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
-                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">â¬… Volver</button>
-                <h2 class="text-lg font-extrabold text-amber-400">ðŸ“¦ Ãrea de Empaque</h2>
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
+                <h2 class="text-lg font-extrabold text-amber-400">📦 Área de Empaque</h2>
                 
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Seleccionar Lote a Empacar:</label>
@@ -124,7 +124,7 @@
                 </div>
 
                 <div id="e-info-box" class="hidden bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs">
-                    <span class="block text-slate-400 mb-1">Estado de la Fruta en ProducciÃ³n:</span>
+                    <span class="block text-slate-400 mb-1">Estado de la Fruta en Producción:</span>
                     <span id="e-info-status" class="font-black px-2 py-1 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700/50"></span>
                 </div>
 
@@ -137,7 +137,7 @@
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cajas empacadas en esta sesiÃ³n:</label>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cajas empacadas en esta sesión:</label>
                     <input type="number" id="e-cajas" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
                 </div>
                 
@@ -218,30 +218,31 @@
 
         <section id="view-historial" class="app-view hidden space-y-4">
             <div class="flex justify-between items-center">
-                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">â¬… Volver</button>
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
             </div>
             
             <div id="cards-container" class="space-y-3"></div>
 
             <div id="g-box-gestion-ordenes" class="hidden bg-slate-800 p-5 rounded-2xl border border-rose-500/30 space-y-3 mt-6">
-                <h3 class="text-sm font-black text-rose-400 uppercase">ðŸ—‘ï¸ GestiÃ³n de Ã“rdenes (Cascada)</h3>
-                <p class="text-[10px] text-slate-400">Al eliminar un lote desde aquÃ­, se limpiarÃ¡n los registros correspondientes de todas las hojas operativas y analÃ­ticas vinculadas en Google Sheets.</p>
+                <h3 class="text-sm font-black text-rose-400 uppercase">🗑️ Gestión de Órdenes (Cascada)</h3>
+                <p class="text-[10px] text-slate-400">Al eliminar un lote desde aquí, se limpiarán los registros correspondientes de todas las hojas operativas y analíticas vinculadas en Google Sheets.</p>
                 <select id="g-lote-select" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs"></select>
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="gerenteOcultarLoteApp()" class="bg-slate-700 text-white text-[11px] font-bold py-2 rounded-xl border border-slate-600">Ocultar de App</button>
-                    <button onclick="gerenteBorrarLoteTotal()" class="bg-rose-600 text-white text-[11px] font-black py-2 rounded-xl uppercase border border-rose-700 shadow-md">Borrar Total âœ•</button>
+                    <button onclick="gerenteBorrarLoteTotal()" class="bg-rose-600 text-white text-[11px] font-black py-2 rounded-xl uppercase border border-rose-700 shadow-md">Borrar Total ✕</button>
                 </div>
             </div>
         </section>
     </main>
 
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid grid-cols-4 gap-1 z-50 shadow-2xl backdrop-blur-lg">
-        <button onclick="switchView('frutas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">ðŸ“</span><span class="text-[9px]">Frutas</span></button>
-        <button onclick="switchView('empaque')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">ðŸ“¦</span><span class="text-[9px]">Empaque</span></button>
+        <button onclick="switchView('frutas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">🍓</span><span class="text-[9px]">Frutas</span></button>
+        <button onclick="switchView('empaque')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📦</span><span class="text-[9px]">Empaque</span></button>
         <button onclick="switchView('bodega')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">INV</span><span class="text-[9px]">Bodega</span></button>
-        <button onclick="switchView('historial')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">ðŸ“‹</span><span class="text-[9px]">Historial</span></button>
+        <button onclick="switchView('historial')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📋</span><span class="text-[9px]">Historial</span></button>
     </nav>
     <script src="js/app.js"></script>
 </body>
 </html>
+
 

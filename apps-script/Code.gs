@@ -1,9 +1,9 @@
-﻿//Script Google sheets API conexiÃ³n con aplicaciÃ³n
+﻿//Script Google sheets API conexión con aplicación
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [] };
 
-  // 1. Cargar Opciones del CatÃ¡logo
+  // 1. Cargar Opciones del Catálogo
   var sheetOpciones = ss.getSheetByName("Opciones");
   if (sheetOpciones) {
     var opts = sheetOpciones.getDataRange().getValues();
@@ -107,7 +107,7 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  // ValidaciÃ³n de seguridad: Si no hay datos, terminar inmediatamente
+  // Validación de seguridad: Si no hay datos, terminar inmediatamente
   if (typeof e === 'undefined' || !e.postData) {
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: "No se recibieron datos viciados manualmente."}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -119,15 +119,15 @@ function doPost(e) {
     // Espera hasta 30 segundos (30000 ms) para obtener el bloqueo antes de lanzar un error
     lock.waitLock(30000);
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({status: "error", message: "El servidor estÃ¡ ocupado. Intente de nuevo."})).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: "El servidor está ocupado. Intente de nuevo."})).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // EjecuciÃ³n segura de procesos bajo bloqueo mutuo
+  // Ejecución segura de procesos bajo bloqueo mutuo
   try {
     var params = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // -- GERENCIA: ACTUALIZAR CATÃLOGO --
+    // -- GERENCIA: ACTUALIZAR CATÁLOGO --
     if (params.action === "updateOptions") {
       var sheetOpt = getOrCreateSheet_(ss, "Opciones", ["Fruta"]);
       sheetOpt.clearContents();
@@ -548,5 +548,6 @@ function reconstruirControlMateriaPrima() {
     if (dataFruta[i][0]) calcularMateriaPrima(dataFruta[i][0]);
   }
 }
+
 
 
