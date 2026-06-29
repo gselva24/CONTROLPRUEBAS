@@ -1,14 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sistema V2 - Planta Frutas y Empaque</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen pb-24 font-sans antialiased">
 
@@ -18,24 +15,24 @@
             <p id="global-status" class="text-[10px] text-amber-400 font-medium italic">Sincronizando con la nube...</p>
         </div>
         <button id="admin-toggle-btn" onclick="promptAdmin()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-xl font-bold border border-slate-600 transition">
-            🔑 Gerente
+            ðŸ”‘ Gerente
         </button>
     </header>
 
     <main class="max-w-2xl mx-auto p-4 space-y-6">
 
         <section id="view-home" class="app-view space-y-4 text-center py-6">
-            <h2 class="text-2xl font-black text-indigo-400 mb-6">Seleccione su Área</h2>
+            <h2 class="text-2xl font-black text-indigo-400 mb-6">Seleccione su Ãrea</h2>
             <div class="grid grid-cols-1 gap-4 max-w-sm mx-auto">
                 <button onclick="switchView('frutas')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
-                    <span class="text-3xl">🍓</span>
-                    <div class="text-left"><span class="block font-black text-lg">Área de Frutas</span></div>
-                    <span class="text-slate-500 font-bold">➔</span>
+                    <span class="text-3xl">ðŸ“</span>
+                    <div class="text-left"><span class="block font-black text-lg">Ãrea de Frutas</span></div>
+                    <span class="text-slate-500 font-bold">âž”</span>
                 </button>
                 <button onclick="switchView('empaque')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
-                    <span class="text-3xl">📦</span>
-                    <div class="text-left"><span class="block font-black text-lg">Área de Empaque</span></div>
-                    <span class="text-slate-500 font-bold">➔</span>
+                    <span class="text-3xl">ðŸ“¦</span>
+                    <div class="text-left"><span class="block font-black text-lg">Ãrea de Empaque</span></div>
+                    <span class="text-slate-500 font-bold">âž”</span>
                 </button>
                 <button onclick="switchView('bodega')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
                     <span class="text-xl font-black text-cyan-400">INV</span>
@@ -43,17 +40,17 @@
                     <span class="text-slate-500 font-bold">></span>
                 </button>
                 <button onclick="switchView('historial')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
-                    <span class="text-3xl">📋</span>
+                    <span class="text-3xl">ðŸ“‹</span>
                     <div class="text-left"><span class="block font-black text-lg">Trazabilidad</span></div>
-                    <span class="text-slate-500 font-bold">➔</span>
+                    <span class="text-slate-500 font-bold">âž”</span>
                 </button>
             </div>
         </section>
 
         <section id="view-frutas" class="app-view hidden space-y-4">
             <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
-                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold mb-2 flex items-center gap-1 hover:underline">⬅ Volver</button>
-                <h2 class="text-lg font-extrabold text-indigo-400 flex items-center gap-2">🍓 Área de Frutas</h2>
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold mb-2 flex items-center gap-1 hover:underline">â¬… Volver</button>
+                <h2 class="text-lg font-extrabold text-indigo-400 flex items-center gap-2">ðŸ“ Ãrea de Frutas</h2>
                 
                 <div class="bg-slate-900/60 p-2 rounded-xl flex gap-2 text-xs">
                     <button id="mode-new-btn" onclick="setFrutasMode(false)" class="flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white">Iniciar lote</button>
@@ -94,7 +91,6 @@
                     <div id="f-iniciar-actions" class="pt-4 text-center">
                         <span id="chrono-display" class="text-5xl font-mono font-black text-emerald-400 hidden mb-4">00:00:00</span>
                         <button id="btn-start" onclick="iniciarLoteFrutas()" class="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-xs uppercase shadow-lg shadow-emerald-900/30">Iniciar y guardar lote</button>
-                        <button id="btn-stop" onclick="stopTimer()" class="w-full bg-rose-600 text-white font-black py-4 rounded-xl text-xs uppercase hidden shadow-lg shadow-rose-900/30">Detener Cronómetro</button>
                     </div>
                 </div>
 
@@ -108,10 +104,10 @@
             </div>
             
             <div id="g-box-catalogo" class="hidden bg-slate-800 p-5 rounded-2xl border border-amber-500/30 space-y-3">
-                <h3 class="text-xs font-black text-amber-400 uppercase">⚙️ Catálogo (Gerente)</h3>
+                <h3 class="text-xs font-black text-amber-400 uppercase">âš™ï¸ CatÃ¡logo (Gerente)</h3>
                 <div class="flex gap-2">
                     <input type="text" id="new-fruta-input" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs">
-                    <button onclick="addFrutaCatalog()" class="bg-amber-500 text-slate-900 font-bold px-4 rounded-xl text-xs">Añadir</button>
+                    <button onclick="addFrutaCatalog()" class="bg-amber-500 text-slate-900 font-bold px-4 rounded-xl text-xs">AÃ±adir</button>
                 </div>
                 <ul id="catalog-list" class="space-y-1 text-xs"></ul>
             </div>
@@ -119,8 +115,8 @@
 
         <section id="view-empaque" class="app-view hidden space-y-4">
             <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
-                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
-                <h2 class="text-lg font-extrabold text-amber-400">📦 Área de Empaque</h2>
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">â¬… Volver</button>
+                <h2 class="text-lg font-extrabold text-amber-400">ðŸ“¦ Ãrea de Empaque</h2>
                 
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Seleccionar Lote a Empacar:</label>
@@ -128,7 +124,7 @@
                 </div>
 
                 <div id="e-info-box" class="hidden bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs">
-                    <span class="block text-slate-400 mb-1">Estado de la Fruta en Producción:</span>
+                    <span class="block text-slate-400 mb-1">Estado de la Fruta en ProducciÃ³n:</span>
                     <span id="e-info-status" class="font-black px-2 py-1 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700/50"></span>
                 </div>
 
@@ -141,7 +137,7 @@
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cajas empacadas en esta sesión:</label>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cajas empacadas en esta sesiÃ³n:</label>
                     <input type="number" id="e-cajas" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
                 </div>
                 
@@ -222,692 +218,30 @@
 
         <section id="view-historial" class="app-view hidden space-y-4">
             <div class="flex justify-between items-center">
-                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">â¬… Volver</button>
             </div>
             
             <div id="cards-container" class="space-y-3"></div>
 
             <div id="g-box-gestion-ordenes" class="hidden bg-slate-800 p-5 rounded-2xl border border-rose-500/30 space-y-3 mt-6">
-                <h3 class="text-sm font-black text-rose-400 uppercase">🗑️ Gestión de Órdenes (Cascada)</h3>
-                <p class="text-[10px] text-slate-400">Al eliminar un lote desde aquí, se limpiarán los registros correspondientes de todas las hojas operativas y analíticas vinculadas en Google Sheets.</p>
+                <h3 class="text-sm font-black text-rose-400 uppercase">ðŸ—‘ï¸ GestiÃ³n de Ã“rdenes (Cascada)</h3>
+                <p class="text-[10px] text-slate-400">Al eliminar un lote desde aquÃ­, se limpiarÃ¡n los registros correspondientes de todas las hojas operativas y analÃ­ticas vinculadas en Google Sheets.</p>
                 <select id="g-lote-select" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs"></select>
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="gerenteOcultarLoteApp()" class="bg-slate-700 text-white text-[11px] font-bold py-2 rounded-xl border border-slate-600">Ocultar de App</button>
-                    <button onclick="gerenteBorrarLoteTotal()" class="bg-rose-600 text-white text-[11px] font-black py-2 rounded-xl uppercase border border-rose-700 shadow-md">Borrar Total ✕</button>
+                    <button onclick="gerenteBorrarLoteTotal()" class="bg-rose-600 text-white text-[11px] font-black py-2 rounded-xl uppercase border border-rose-700 shadow-md">Borrar Total âœ•</button>
                 </div>
             </div>
         </section>
     </main>
 
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid grid-cols-4 gap-1 z-50 shadow-2xl backdrop-blur-lg">
-        <button onclick="switchView('frutas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">🍓</span><span class="text-[9px]">Frutas</span></button>
-        <button onclick="switchView('empaque')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📦</span><span class="text-[9px]">Empaque</span></button>
+        <button onclick="switchView('frutas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">ðŸ“</span><span class="text-[9px]">Frutas</span></button>
+        <button onclick="switchView('empaque')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">ðŸ“¦</span><span class="text-[9px]">Empaque</span></button>
         <button onclick="switchView('bodega')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">INV</span><span class="text-[9px]">Bodega</span></button>
-        <button onclick="switchView('historial')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📋</span><span class="text-[9px]">Historial</span></button>
+        <button onclick="switchView('historial')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">ðŸ“‹</span><span class="text-[9px]">Historial</span></button>
     </nav>
-
-    <script>
-        // SUSTITUIR CON TU URL DE APPS SCRIPT PUBLICADA
-        const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbwq6uE7f06g_z9L-R-Z17I9qnpuGlH3lYIVGIBmf4nNVG19kaGgT9ICOSgvZvudavhdeg/exec"; 
-        const GERENTE_PASSWORD = "PRODUCCION2026";
-
-        let isAdmin = false;
-        let frutasCatalog = [];
-        let pedidosPendientes = [];
-        let pedidosParciales = []; 
-        let historialCompleto = [];
-        let inventarioBodega = [];
-        let bodegaNuevoMode = false;
-        
-        let isRetomadoMode = false; 
-        let timerInterval = null;
-        let startTime = null;
-        let elapsedTimeInSeconds = 0;
-
-        window.addEventListener('DOMContentLoaded', () => { fetchDataFromCloud(); switchView('home'); });
-
-        function fetchDataFromCloud() {
-            document.getElementById('global-status').innerText = "⏳ Sincronizando...";
-            const cacheBust = GOOGLE_SHEETS_URL.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-            fetch(`${GOOGLE_SHEETS_URL}${cacheBust}`, { redirect: "follow" })
-            .then(res => res.json())
-            .then(data => {
-                frutasCatalog = data.frutas || [];
-                pedidosPendientes = data.pedidosPendientes || [];
-                pedidosParciales = data.pedidosParciales || [];
-                historialCompleto = data.historial || [];
-                inventarioBodega = data.inventarioBodega || [];
-                
-                renderFrutasSelect(); 
-                renderParcialesSelect(); 
-                renderEmpaqueSelect(); 
-                renderBodegaSelect();
-                renderBodegaInventory();
-                renderMobileHistory(); 
-                renderGerenteLoteSelect();
-                
-                const historialSinMetricas = historialCompleto.some(p => typeof p.pesoProcesado === "undefined" || typeof p.cajasProcesadas === "undefined");
-                if (historialSinMetricas) {
-                    document.getElementById('global-status').innerText = "Script sin metricas V2";
-                    document.getElementById('global-status').className = "text-[10px] text-amber-400 font-medium italic";
-                    return;
-                }
-
-                document.getElementById('global-status').innerText = "✅ Sincronizado";
-                document.getElementById('global-status').className = "text-[10px] text-emerald-400 font-medium italic";
-            })
-            .catch(err => {
-                console.error("Error de conexión GET:", err);
-                document.getElementById('global-status').innerText = "❌ Error conexión";
-                document.getElementById('global-status').className = "text-[10px] text-rose-400 font-medium italic";
-            });
-        }
-
-        function switchView(viewName) {
-            document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
-        }
-
-        function setFrutasMode(mode) {
-            isRetomadoMode = mode;
-            if(mode) {
-                document.getElementById('f-grupo-manual-inputs').classList.add('hidden');
-                document.getElementById('f-container-retomar').classList.remove('hidden');
-                document.getElementById('f-peso-in').disabled = true;
-                document.getElementById('f-peso-in').classList.add('opacity-50');
-            } else {
-                document.getElementById('f-grupo-manual-inputs').classList.remove('hidden');
-                document.getElementById('f-container-retomar').classList.add('hidden');
-                document.getElementById('f-peso-in').disabled = false;
-                document.getElementById('f-peso-in').classList.remove('opacity-50');
-            }
-        }
-
-        function autoFillRetomado() {
-            const val = document.getElementById('f-pedido-parcial-select').value;
-            const lote = pedidosParciales.find(p => p.id === val);
-            if(lote) {
-                document.getElementById('f-nombre').value = lote.nombre;
-                document.getElementById('f-fruta').value = lote.fruta;
-                document.getElementById('f-peso-in').value = lote.pesoEntrada;
-            }
-        }
-
-        function startTimer() {
-            startTime = new Date();
-            document.getElementById('btn-start').classList.add('hidden');
-            document.getElementById('btn-stop').classList.remove('hidden');
-            
-            if (isAdmin) {
-                document.getElementById('chrono-display').classList.remove('hidden');
-            } else {
-                document.getElementById('chrono-display').classList.add('hidden');
-            }
-
-            timerInterval = setInterval(() => {
-                elapsedTimeInSeconds = Math.floor((new Date() - startTime) / 1000);
-                
-                if (isAdmin) {
-                    const hrs = Math.floor(elapsedTimeInSeconds / 3600).toString().padStart(2, '0');
-                    const mins = Math.floor((elapsedTimeInSeconds % 3600) / 60).toString().padStart(2, '0');
-                    const secs = (elapsedTimeInSeconds % 60).toString().padStart(2, '0');
-                    document.getElementById('chrono-display').innerText = `${hrs}:${mins}:${secs}`;
-                }
-            }, 1000);
-        }
-
-        function stopTimer() {
-            clearInterval(timerInterval);
-            document.getElementById('f-step-2').classList.remove('hidden');
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-
-        function resetFrutasForm() {
-            document.getElementById('f-nombre').value = "";
-            document.getElementById('f-peso-in').value = "";
-            document.getElementById('f-peso-dinamico-input').value = "";
-            document.getElementById('chrono-display').innerText = "00:00:00";
-            document.getElementById('chrono-display').classList.add('hidden'); 
-            document.getElementById('btn-start').classList.remove('hidden');
-            document.getElementById('btn-stop').classList.add('hidden');
-            document.getElementById('f-step-2').classList.add('hidden');
-            setFrutasMode(false); 
-        }
-
-        function saveLoteFrutas() {
-            const nombre = document.getElementById('f-nombre').value;
-            const pesoEntrada = Number(document.getElementById('f-peso-in').value);
-            const salidaSesionActual = Number(document.getElementById('f-peso-dinamico-input').value);
-            const estadoFrutas = document.getElementById('f-estado-cierre').value;
-            if (!nombre) { alert("⚠️ Por favor, ingrese el nombre del pedido o cliente."); return; }
-            if (!startTime) { alert("Inicie el proceso antes de guardar el registro."); return; }
-            if (!pesoEntrada || pesoEntrada <= 0) { alert("Ingrese un peso de entrada mayor a cero."); return; }
-            if (!salidaSesionActual || salidaSesionActual <= 0) { alert("Ingrese las libras procesadas en esta sesión."); return; }
-            if (salidaSesionActual > pesoEntrada) { alert("Revise el peso procesado: no puede superar el peso de entrada."); return; }
-
-            const payload = {
-                action: "registroFrutas",
-                isRetomado: isRetomadoMode,
-                idPedido: document.getElementById('f-pedido-parcial-select').value,
-                nombrePedido: nombre,
-                frutaTipo: document.getElementById('f-fruta').value,
-                pesoEntrada: pesoEntrada,
-                pesoSalida: estadoFrutas === "Proceso Completo" ? salidaSesionActual : 0,
-                salidaSesionActual: salidaSesionActual,
-                estadoFrutas: estadoFrutas,
-                pesoParcial: salidaSesionActual,
-                fecha: new Date().toLocaleDateString('es-ES'),
-                start: startTime.toLocaleTimeString('es-ES'),
-                end: new Date().toLocaleTimeString('es-ES'),
-                durationSecs: elapsedTimeInSeconds
-            };
-
-            document.getElementById('global-status').innerText = "⏳ Guardando...";
-
-            fetch(GOOGLE_SHEETS_URL, { 
-                method: "POST", 
-                headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                body: JSON.stringify(payload) 
-            })
-            .then(res => res.json())
-            .then(resData => {
-                if(resData && resData.status === "error") {
-                    alert("❌ " + resData.message);
-                } else {
-                    alert("✅ ¡Proceso guardado exitosamente!");
-                    resetFrutasForm();
-                    fetchDataFromCloud(); 
-                    switchView('historial'); 
-                }
-            })
-            .catch(err => { console.error(err); alert("❌ Error de red al guardar."); });
-        }
-
-        function setFrutasMode(mode) {
-            isRetomadoMode = mode;
-            if(mode) {
-                document.getElementById('f-grupo-manual-inputs').classList.add('hidden');
-                document.getElementById('f-container-retomar').classList.remove('hidden');
-                document.getElementById('f-peso-in').disabled = true;
-                document.getElementById('f-peso-in').classList.add('opacity-50');
-                document.getElementById('f-step-2').classList.remove('hidden');
-                document.getElementById('mode-new-btn').className = "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-                document.getElementById('mode-resume-btn').className = "flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white";
-            } else {
-                document.getElementById('f-grupo-manual-inputs').classList.remove('hidden');
-                document.getElementById('f-container-retomar').classList.add('hidden');
-                document.getElementById('f-peso-in').disabled = false;
-                document.getElementById('f-peso-in').classList.remove('opacity-50');
-                document.getElementById('f-step-2').classList.add('hidden');
-                document.getElementById('mode-new-btn').className = "flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white";
-                document.getElementById('mode-resume-btn').className = "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-            }
-        }
-
-        function autoFillRetomado() {
-            const val = document.getElementById('f-pedido-parcial-select').value;
-            const lote = pedidosParciales.find(p => p.id === val);
-            const info = document.getElementById('f-lote-info');
-            if(lote) {
-                document.getElementById('f-nombre').value = lote.nombre;
-                document.getElementById('f-fruta').value = lote.fruta;
-                document.getElementById('f-peso-in').value = lote.pesoEntrada;
-                info.innerHTML = `
-                    <div><span class="text-slate-400">Estado:</span> <span class="font-black text-amber-300">${lote.estadoFrutas}</span></div>
-                    <div><span class="text-slate-400">Entrada:</span> <span class="font-bold">${lote.pesoEntrada} lb</span></div>
-                    <div><span class="text-slate-400">Proveedor:</span> <span class="font-bold">${lote.proveedorIniciales || '-'}</span></div>`;
-                info.classList.remove('hidden');
-            } else {
-                info.classList.add('hidden');
-            }
-        }
-
-        function resetFrutasForm() {
-            document.getElementById('f-nombre').value = "";
-            document.getElementById('f-proveedor').value = "";
-            document.getElementById('f-peso-in').value = "";
-            document.getElementById('f-peso-dinamico-input').value = "";
-            document.getElementById('f-peso-averia').value = "";
-            document.getElementById('f-peso-desecho').value = "";
-            document.getElementById('f-nota-final').value = "";
-            document.getElementById('f-pedido-parcial-select').value = "";
-            document.getElementById('f-lote-info').classList.add('hidden');
-            document.getElementById('f-step-2').classList.add('hidden');
-            setFrutasMode(false);
-        }
-
-        function postFrutas(payload, successMessage) {
-            document.getElementById('global-status').innerText = "Guardando...";
-            fetch(GOOGLE_SHEETS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(resData => {
-                if(resData && resData.status === "error") {
-                    alert("Error: " + resData.message);
-                } else {
-                    alert(successMessage);
-                    resetFrutasForm();
-                    fetchDataFromCloud();
-                    switchView('historial');
-                }
-            })
-            .catch(err => { console.error(err); alert("Error de red al guardar."); });
-        }
-
-        function iniciarLoteFrutas() {
-            const nombre = document.getElementById('f-nombre').value.trim();
-            const proveedorIniciales = document.getElementById('f-proveedor').value.trim().toUpperCase();
-            const pesoEntrada = Number(document.getElementById('f-peso-in').value);
-            if (!nombre) { alert("Ingrese el lote o nombre del pedido."); return; }
-            if (!proveedorIniciales) { alert("Ingrese las iniciales del proveedor."); return; }
-            if (!pesoEntrada || pesoEntrada <= 0) { alert("Ingrese un peso de entrada mayor a cero."); return; }
-
-            postFrutas({
-                action: "iniciarLoteFrutas",
-                nombrePedido: nombre,
-                proveedorIniciales: proveedorIniciales,
-                frutaTipo: document.getElementById('f-fruta').value,
-                pesoEntrada: pesoEntrada,
-                fecha: new Date().toLocaleDateString('es-ES')
-            }, "Lote iniciado y guardado.");
-        }
-
-        function pausarLoteFrutas() {
-            const idPedido = document.getElementById('f-pedido-parcial-select').value;
-            if (!idPedido) { alert("Seleccione un lote."); return; }
-            const motivo = prompt("Motivo de pausa:");
-            if (!motivo) { alert("Ingrese el motivo de pausa."); return; }
-            postFrutas({ action: "pausarLoteFrutas", idPedido: idPedido, motivoPausa: motivo }, "Lote pausado.");
-        }
-
-        function retomarLoteFrutas() {
-            const idPedido = document.getElementById('f-pedido-parcial-select').value;
-            if (!idPedido) { alert("Seleccione un lote."); return; }
-            postFrutas({ action: "retomarLoteFrutas", idPedido: idPedido }, "Lote retomado.");
-        }
-
-        function finalizarLoteFrutas() {
-            const idPedido = document.getElementById('f-pedido-parcial-select').value;
-            const lote = pedidosParciales.find(p => p.id === idPedido);
-            const pesoFinal = Number(document.getElementById('f-peso-dinamico-input').value);
-            const pesoAveria = Number(document.getElementById('f-peso-averia').value || 0);
-            const pesoDesecho = Number(document.getElementById('f-peso-desecho').value || 0);
-            if (!lote) { alert("Seleccione un lote."); return; }
-            if (!pesoFinal || pesoFinal <= 0) { alert("Ingrese el peso neto final."); return; }
-            if (pesoFinal > Number(lote.pesoEntrada)) { alert("El peso final no puede superar el peso de entrada."); return; }
-            if (pesoAveria < 0 || pesoDesecho < 0) { alert("Averia y desecho no pueden ser negativos."); return; }
-            postFrutas({
-                action: "finalizarLoteFrutas",
-                idPedido: idPedido,
-                pesoFinal: pesoFinal,
-                pesoAveria: pesoAveria,
-                pesoDesecho: pesoDesecho,
-                notaFinal: document.getElementById('f-nota-final').value.trim()
-            }, "Lote finalizado.");
-        }
-
-        function setFrutasMode(mode) {
-            isRetomadoMode = mode;
-            const gestionando = Boolean(mode);
-            document.getElementById('f-grupo-manual-inputs').classList.toggle('hidden', gestionando);
-            document.getElementById('f-container-retomar').classList.toggle('hidden', !gestionando);
-            document.getElementById('f-iniciar-actions').classList.toggle('hidden', gestionando);
-            document.getElementById('f-peso-in').disabled = gestionando;
-            document.getElementById('f-peso-in').classList.toggle('opacity-50', gestionando);
-            document.getElementById('f-step-2').classList.toggle('hidden', !gestionando);
-            document.getElementById('mode-new-btn').className = gestionando
-                ? "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300"
-                : "flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white";
-            document.getElementById('mode-resume-btn').className = gestionando
-                ? "flex-1 py-2 rounded-lg font-bold bg-indigo-600 text-white"
-                : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-            actualizarAccionesFrutas(null);
-        }
-
-        function actualizarAccionesFrutas(lote) {
-            const btnPausar = document.getElementById('btn-pausar-lote');
-            const btnRetomar = document.getElementById('btn-retomar-lote');
-            btnPausar.classList.add('hidden');
-            btnRetomar.classList.add('hidden');
-            if (!lote) return;
-            if (lote.estadoFrutas === "En proceso") btnPausar.classList.remove('hidden');
-            if (lote.estadoFrutas === "Pausado") btnRetomar.classList.remove('hidden');
-        }
-
-        function autoFillRetomado() {
-            const val = document.getElementById('f-pedido-parcial-select').value;
-            const lote = pedidosParciales.find(p => p.id === val);
-            const info = document.getElementById('f-lote-info');
-            actualizarAccionesFrutas(lote);
-            if(lote) {
-                document.getElementById('f-nombre').value = lote.nombre;
-                document.getElementById('f-fruta').value = lote.fruta;
-                document.getElementById('f-peso-in').value = lote.pesoEntrada;
-                info.innerHTML = `
-                    <div><span class="text-slate-400">Estado:</span> <span class="font-black text-amber-300">${lote.estadoFrutas}</span></div>
-                    <div><span class="text-slate-400">Entrada:</span> <span class="font-bold">${lote.pesoEntrada} lb</span></div>
-                    <div><span class="text-slate-400">Proveedor:</span> <span class="font-bold">${lote.proveedorIniciales || '-'}</span></div>`;
-                info.classList.remove('hidden');
-            } else {
-                info.classList.add('hidden');
-            }
-        }
-
-        function renderEmpaqueSelect() {
-            const select = document.getElementById('e-pedido-select');
-            select.innerHTML = '<option value="">-- Seleccionar Lote --</option>';
-            pedidosPendientes.filter(p => p.visibleApp === "SI" && p.estadoEmpaqueGlobal !== "Empacado Total").forEach(p => { 
-                select.innerHTML += `<option value="${p.id}">${p.id} - ${p.nombre} (${p.fruta})</option>`; 
-            });
-        }
-
-        function actualizarInfoEmpaque() {
-            const idPed = document.getElementById('e-pedido-select').value;
-            const box = document.getElementById('e-info-box');
-            if(!idPed) { box.classList.add('hidden'); return; }
-            
-            const lote = pedidosPendientes.find(p => p.id === idPed);
-            if(lote) {
-                document.getElementById('e-info-status').innerText = lote.estadoFrutas;
-                box.classList.remove('hidden');
-            }
-        }
-
-        function submitEmpaque() {
-            const idPed = document.getElementById('e-pedido-select').value;
-            const lote = pedidosPendientes.find(p => p.id === idPed);
-            const cajas = document.getElementById('e-cajas').value;
-            
-            if(!lote || !cajas) { alert("⚠️ Seleccione un lote y asigne una cantidad de cajas."); return; }
-
-            const payload = {
-                action: "registroEmpaque",
-                idPedido: idPed,
-                nombrePedido: lote.nombre,
-                frutaTipo: lote.fruta,
-                fechaEmpaque: new Date().toLocaleDateString('es-ES'),
-                cajas: cajas,
-                estadoEmpaque: document.getElementById('e-estado-cierre').value
-            };
-            
-            document.getElementById('global-status').innerText = "⏳ Guardando Empaque...";
-            
-            fetch(GOOGLE_SHEETS_URL, { 
-                method: "POST", 
-                headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                body: JSON.stringify(payload) 
-            })
-            .then(res => res.json())
-            .then(resData => { 
-                if(resData && resData.status === "error") {
-                    alert("❌ " + resData.message);
-                } else {
-                    alert("✅ ¡Empaque registrado exitosamente!"); 
-                    document.getElementById('e-cajas').value = "";
-                    document.getElementById('e-pedido-select').value = "";
-                    document.getElementById('e-info-box').classList.add('hidden');
-                    fetchDataFromCloud(); 
-                    switchView('historial'); 
-                }
-            })
-            .catch(err => { console.error(err); alert("❌ Error al guardar empaque."); });
-        }
-
-        function setBodegaMode(mode) {
-            bodegaNuevoMode = mode;
-            document.getElementById('b-existing-fields').classList.toggle('hidden', mode);
-            document.getElementById('b-new-fields').classList.toggle('hidden', !mode);
-            document.getElementById('b-tipo-movimiento').value = mode ? "Entrada" : document.getElementById('b-tipo-movimiento').value;
-            document.getElementById('b-tipo-movimiento').disabled = mode;
-            document.getElementById('b-mode-new-btn').className = mode
-                ? "flex-1 py-2 rounded-lg font-bold bg-cyan-600 text-white"
-                : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-            document.getElementById('b-mode-existing-btn').className = !mode
-                ? "flex-1 py-2 rounded-lg font-bold bg-cyan-600 text-white"
-                : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-        }
-
-        function renderBodegaSelect() {
-            const select = document.getElementById('b-item-select');
-            select.innerHTML = '<option value="">-- Seleccionar producto --</option>';
-            inventarioBodega
-                .filter(i => i.visibleApp !== "NO")
-                .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)))
-                .forEach(i => {
-                    select.innerHTML += `<option value="${i.id}">${i.nombre} (${i.stock} ${i.unidad || ''})</option>`;
-                });
-            actualizarInfoBodega();
-        }
-
-        function actualizarInfoBodega() {
-            const id = document.getElementById('b-item-select').value;
-            const box = document.getElementById('b-stock-box');
-            const item = inventarioBodega.find(i => i.id === id);
-            if (!item) { box.classList.add('hidden'); return; }
-            document.getElementById('b-stock-actual').innerText = `${item.stock} ${item.unidad || ''}`;
-            box.classList.remove('hidden');
-        }
-
-        function renderBodegaInventory() {
-            const container = document.getElementById('b-inventory-list');
-            const activos = inventarioBodega.filter(i => i.visibleApp !== "NO");
-            container.innerHTML = "";
-            if (activos.length === 0) {
-                container.innerHTML = `<p class="text-center text-slate-500 py-3">No hay inventario registrado.</p>`;
-                return;
-            }
-
-            activos
-                .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)))
-                .forEach(i => {
-                    container.innerHTML += `
-                        <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-xl p-3">
-                            <div>
-                                <span class="block font-black text-slate-100">${i.nombre}</span>
-                                <span class="block text-[10px] text-slate-500">${i.categoria || 'Sin tipo de insumo'}</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="block font-black text-cyan-300">${i.stock}</span>
-                                <span class="block text-[10px] text-slate-400">${i.unidad || ''}</span>
-                            </div>
-                        </div>`;
-                });
-        }
-
-        function resetBodegaForm() {
-            document.getElementById('b-cantidad').value = "";
-            document.getElementById('b-nota').value = "";
-            document.getElementById('b-nombre-nuevo').value = "";
-            document.getElementById('b-categoria-nueva').value = "";
-            document.getElementById('b-unidad-nueva').value = "";
-            document.getElementById('b-item-select').value = "";
-            actualizarInfoBodega();
-            setBodegaMode(false);
-        }
-
-        function submitBodega() {
-            const cantidad = Number(document.getElementById('b-cantidad').value);
-            const tipoMovimiento = document.getElementById('b-tipo-movimiento').value;
-            const itemSeleccionado = inventarioBodega.find(i => i.id === document.getElementById('b-item-select').value);
-            const nombreNuevo = document.getElementById('b-nombre-nuevo').value.trim();
-
-            if (!cantidad || cantidad <= 0) { alert("Ingrese una cantidad mayor a cero."); return; }
-            if (!bodegaNuevoMode && !itemSeleccionado) { alert("Seleccione un producto existente."); return; }
-            if (bodegaNuevoMode && !nombreNuevo) { alert("Ingrese el nombre del producto nuevo."); return; }
-            if (bodegaNuevoMode && tipoMovimiento === "Salida") { alert("Para una salida debe seleccionar un producto existente."); return; }
-
-            const payload = {
-                action: "registroBodega",
-                tipoMovimiento: tipoMovimiento,
-                idItem: itemSeleccionado ? itemSeleccionado.id : "",
-                nombreItem: bodegaNuevoMode ? nombreNuevo : itemSeleccionado.nombre,
-                categoria: bodegaNuevoMode ? document.getElementById('b-categoria-nueva').value.trim() : itemSeleccionado.categoria,
-                unidad: bodegaNuevoMode ? document.getElementById('b-unidad-nueva').value.trim() : itemSeleccionado.unidad,
-                cantidad: cantidad,
-                responsable: document.getElementById('b-responsable').value.trim(),
-                nota: document.getElementById('b-nota').value.trim(),
-                fecha: new Date().toLocaleString('es-ES')
-            };
-
-            document.getElementById('global-status').innerText = "Guardando movimiento...";
-            fetch(GOOGLE_SHEETS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(resData => {
-                if (resData && resData.status === "error") {
-                    alert("❌ " + resData.message);
-                } else {
-                    alert("Movimiento de bodega guardado.");
-                    resetBodegaForm();
-                    fetchDataFromCloud();
-                }
-            })
-            .catch(err => { console.error(err); alert("Error al guardar movimiento de bodega."); });
-        }
-
-        function renderMobileHistory() {
-            const container = document.getElementById('cards-container'); 
-            container.innerHTML = "";
-            const filtrado = historialCompleto.filter(i => i.visibleApp === "SI");
-            if (filtrado.length === 0) { container.innerHTML = `<p class="text-center text-xs text-slate-500 py-4">No hay lotes activos.</p>`; return; }
-            
-            [...filtrado].reverse().forEach(p => {
-                let frutaEstilos = (p.estadoFrutas === "Proceso Completo" || p.estadoFrutas === "Finalizado")
-                    ? { bg: "bg-emerald-950/40", border: "border-emerald-700/50", text: "text-emerald-400", lightText: "text-emerald-200" }
-                    : { bg: "bg-amber-950/40", border: "border-amber-700/50", text: "text-amber-400", lightText: "text-amber-200" };
-
-                let empaqueEstilos = p.estadoEmpaqueGlobal === "Empacado Total"
-                    ? { bg: "bg-emerald-950/40", border: "border-emerald-700/50", text: "text-emerald-400", lightText: "text-emerald-200" }
-                    : (p.estadoEmpaqueGlobal === "Empacado Parcial"
-                        ? { bg: "bg-amber-950/40", border: "border-amber-700/50", text: "text-amber-400", lightText: "text-amber-200" }
-                        : { bg: "bg-slate-900/60", border: "border-slate-700/50", text: "text-slate-400", lightText: "text-slate-300" });
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 p-4 rounded-xl border border-slate-700/70 shadow-xl text-xs space-y-3";
-                const pesoProcesado = Number(p.pesoProcesado || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 });
-                const cajasProcesadas = Number(p.cajasProcesadas || 0).toLocaleString('es-GT', { maximumFractionDigits: 0 });
-                card.innerHTML = `
-                    <div class="flex justify-between border-b border-slate-700 pb-2">
-                        <span class="font-mono bg-slate-900 px-2 py-0.5 rounded text-amber-400 font-bold tracking-wider">${p.id}</span>
-                        <span class="font-black text-slate-300 uppercase tracking-wide">${p.fruta}</span>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-black text-slate-100">${p.nombre}</h4>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Fecha: ${p.fecha}</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-xl">
-                            <span class="block text-[9px] uppercase font-black tracking-wider text-indigo-300 mb-1">Libras procesadas</span>
-                            <span class="block text-lg font-black text-slate-100">${pesoProcesado}</span>
-                            <span class="block text-[9px] text-slate-500">lb</span>
-                        </div>
-                        <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-xl">
-                            <span class="block text-[9px] uppercase font-black tracking-wider text-amber-300 mb-1">Cajas procesadas</span>
-                            <span class="block text-lg font-black text-slate-100">${cajasProcesadas}</span>
-                            <span class="block text-[9px] text-slate-500">cajas</span>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 pt-1">
-                        <div class="${frutaEstilos.bg} border ${frutaEstilos.border} p-2.5 rounded-xl text-center">
-                            <span class="block text-[9px] uppercase font-black tracking-wider ${frutaEstilos.text} mb-1">🍓 Frutas</span>
-                            <span class="font-bold ${frutaEstilos.lightText}">${p.estadoFrutas}</span>
-                        </div>
-                        <div class="${empaqueEstilos.bg} border ${empaqueEstilos.border} p-2.5 rounded-xl text-center">
-                            <span class="block text-[9px] uppercase font-black tracking-wider ${empaqueEstilos.text} mb-1">📦 Empaque</span>
-                            <span class="font-bold ${empaqueEstilos.lightText}">${p.estadoEmpaqueGlobal}</span>
-                        </div>
-                    </div>`;
-                container.appendChild(card);
-            });
-        }
-
-        function promptAdmin() {
-            if (isAdmin) {
-                isAdmin = false;
-                document.getElementById('g-box-catalogo').classList.add('hidden');
-                document.getElementById('g-box-gestion-ordenes').classList.add('hidden');
-                document.getElementById('chrono-display').classList.add('hidden'); 
-                document.getElementById('admin-toggle-btn').innerText = "🔑 Gerente";
-                document.getElementById('admin-toggle-btn').classList.replace('bg-rose-600', 'bg-slate-700');
-            } else {
-                let pass = prompt("Ingrese contraseña de Gerente:");
-                if (pass === GERENTE_PASSWORD) {
-                    isAdmin = true;
-                    document.getElementById('g-box-catalogo').classList.remove('hidden');
-                    document.getElementById('g-box-gestion-ordenes').classList.remove('hidden');
-                    
-                    if (timerInterval && startTime) {
-                        document.getElementById('chrono-display').classList.remove('hidden');
-                    }
-                    
-                    document.getElementById('admin-toggle-btn').innerText = "🔒 Cerrar";
-                    document.getElementById('admin-toggle-btn').classList.replace('bg-slate-700', 'bg-rose-600');
-                    renderCatalog();
-                } else { alert("Contraseña incorrecta."); }
-            }
-        }
-
-        function renderCatalog() {
-            const list = document.getElementById('catalog-list'); list.innerHTML = "";
-            frutasCatalog.forEach((f, i) => { list.innerHTML += `<li class="flex justify-between bg-slate-900 p-2 rounded"><span>${f}</span> <button onclick="removeFruta(${i})" class="text-rose-500 font-bold">X</button></li>`; });
-        }
-
-        function addFrutaCatalog() {
-            const val = document.getElementById('new-fruta-input').value;
-            if (val) { frutasCatalog.push(val); document.getElementById('new-fruta-input').value = ""; saveCatalogToCloud(); }
-        }
-
-        function removeFruta(index) { frutasCatalog.splice(index, 1); saveCatalogToCloud(); }
-
-        function saveCatalogToCloud() {
-            fetch(GOOGLE_SHEETS_URL, { 
-                method: "POST", 
-                headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                body: JSON.stringify({ action: "updateOptions", options: frutasCatalog }) 
-            }).then(() => { renderCatalog(); renderFrutasSelect(); });
-        }
-
-        function renderFrutasSelect() { 
-            const sel = document.getElementById('f-fruta'); sel.innerHTML = ''; 
-            frutasCatalog.forEach(f => sel.innerHTML += `<option value="${f}">${f}</option>`); 
-        }
-
-        function renderParcialesSelect() { 
-            const sel = document.getElementById('f-pedido-parcial-select'); 
-            sel.innerHTML = '<option value="">- Seleccione -</option>'; 
-            pedidosParciales.filter(p=>p.visibleApp==="SI").forEach(p => sel.innerHTML += `<option value="${p.id}">${p.id} - ${p.nombre} (${p.estadoFrutas})</option>`); 
-        }
-
-        function renderGerenteLoteSelect() { 
-            const sel = document.getElementById('g-lote-select'); sel.innerHTML = '<option value=""></option>'; 
-            historialCompleto.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.id} - ${p.nombre}</option>`); 
-        }
-
-        function gerenteOcultarLoteApp() { 
-            if(confirm("¿Ocultar este lote de la App? (Seguirá en el Excel)")) {
-                fetch(GOOGLE_SHEETS_URL, {
-                    method:"POST", 
-                    headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                    body:JSON.stringify({action:"ocultarLoteManual", idPedido:document.getElementById('g-lote-select').value})
-                }).then(()=>fetchDataFromCloud()); 
-            }
-        }
-
-        function gerenteBorrarLoteTotal() { 
-            if(confirm("¡Peligro! ¿Borrar este lote de todas las pestañas de la base de datos?")) {
-                fetch(GOOGLE_SHEETS_URL, {
-                    method:"POST", 
-                    headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                    body:JSON.stringify({action:"deleteLote", idPedido:document.getElementById('g-lote-select').value})
-                }).then(()=>fetchDataFromCloud()); 
-            }
-        }
-    </script>
+    <script src="js/app.js"></script>
 </body>
 </html>
+
