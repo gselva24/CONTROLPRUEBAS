@@ -6,6 +6,8 @@
                 document.getElementById('chrono-display').classList.add('hidden'); 
                 document.getElementById('admin-toggle-btn').innerText = "🔑 Gerente";
                 document.getElementById('admin-toggle-btn').classList.replace('bg-rose-600', 'bg-slate-700');
+                if (typeof actualizarVistaPedidosGerente === "function") actualizarVistaPedidosGerente();
+                if (typeof renderPedidosCards === "function") renderPedidosCards();
             } else {
                 let pass = prompt("Ingrese contraseña de Gerente:");
                 if (pass === GERENTE_PASSWORD) {
@@ -20,6 +22,8 @@
                     document.getElementById('admin-toggle-btn').innerText = "🔒 Cerrar";
                     document.getElementById('admin-toggle-btn').classList.replace('bg-slate-700', 'bg-rose-600');
                     renderCatalog();
+                    if (typeof actualizarVistaPedidosGerente === "function") actualizarVistaPedidosGerente();
+                    if (typeof renderPedidosCards === "function") renderPedidosCards();
                 } else { alert("Contraseña incorrecta."); }
             }
         }

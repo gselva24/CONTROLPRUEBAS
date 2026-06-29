@@ -1,7 +1,7 @@
 ﻿//Script Google sheets API conexión con aplicación
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [] };
+  var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], pedidosCliente: [], detallePedidosCliente: [] };
 
   // 1. Cargar Opciones del Catálogo
   var sheetOpciones = ss.getSheetByName("Opciones");
@@ -9,6 +9,54 @@ function doGet(e) {
     var opts = sheetOpciones.getDataRange().getValues();
     for (var i = 1; i < opts.length; i++) {
       if (opts[i][0]) data.frutas.push(opts[i][0].toString());
+    }
+  }
+
+  var sheetClientes = ss.getSheetByName("Clientes");
+  if (sheetClientes) {
+    var clientesData = sheetClientes.getDataRange().getValues();
+    for (var c = 1; c < clientesData.length; c++) {
+      data.clientes.push({
+        codigo: clientesData[c][0],
+        nombre: clientesData[c][1],
+        visibleApp: clientesData[c][2] || "SI"
+      });
+    }
+  }
+
+  var sheetPedidosCliente = ss.getSheetByName("Pedidos_Cliente");
+  if (sheetPedidosCliente) {
+    var pedidosClienteData = sheetPedidosCliente.getDataRange().getValues();
+    for (var pc = 1; pc < pedidosClienteData.length; pc++) {
+      data.pedidosCliente.push({
+        idPedido: pedidosClienteData[pc][0],
+        fechaCreacion: pedidosClienteData[pc][1],
+        cliente: pedidosClienteData[pc][2],
+        codigoCliente: pedidosClienteData[pc][3],
+        fechaCarga: pedidosClienteData[pc][4],
+        estadoPedido: pedidosClienteData[pc][5],
+        visibleApp: pedidosClienteData[pc][6] || "SI",
+        nota: pedidosClienteData[pc][7] || ""
+      });
+    }
+  }
+
+  var sheetDetallePedidoCliente = ss.getSheetByName("Detalle_Pedido_Cliente");
+  if (sheetDetallePedidoCliente) {
+    var detallePedidoData = sheetDetallePedidoCliente.getDataRange().getValues();
+    for (var dp = 1; dp < detallePedidoData.length; dp++) {
+      data.detallePedidosCliente.push({
+        idPedido: detallePedidoData[dp][0],
+        area: detallePedidoData[dp][1],
+        producto: detallePedidoData[dp][2],
+        presentacion: detallePedidoData[dp][3],
+        unidad: detallePedidoData[dp][4],
+        cantidadPedida: numeroSeguro_(detallePedidoData[dp][5]),
+        cantidadCompletada: numeroSeguro_(detallePedidoData[dp][6]),
+        estadoDetalle: detallePedidoData[dp][7],
+        visibleApp: detallePedidoData[dp][8] || "SI",
+        nota: detallePedidoData[dp][9] || ""
+      });
     }
   }
 
@@ -52,7 +100,10 @@ function doGet(e) {
         pesoProcesado: pesoProcesado,
         cajasProcesadas: numeroEnteroSeguro_(metricas.cajasProcesadas),
         rendimientoPeso: row[7],
-        estadoFrutas: row[8], estadoEmpaqueGlobal: row[12], visibleApp: row[13]
+        estadoFrutas: row[8],
+        estadoEmpaqueGlobal: row[12],
+        visibleApp: row[13],
+        pesoDisponibleEmpaque: row[14] !== "" && typeof row[14] !== "undefined" ? numeroSeguro_(row[14]) : pesoProcesado
       };
       
       data.historial.push(p);
@@ -164,9 +215,98 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // -- GERENCIA: CLIENTES Y PEDIDOS / ARMADOS --
+    if (params.action === "guardarClientePedido") {
+      var sheetClientesPost = getOrCreateSheet_(ss, "Clientes", ["Codigo_Cliente", "Nombre_Cliente", "Visible_App"]);
+      var codigoClientePost = (params.codigoCliente || "").toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      var nombreClientePost = (params.nombreCliente || "").toString().trim();
+      if (!codigoClientePost || !nombreClientePost) return json_(false, "Ingrese codigo y nombre del cliente.");
+
+      var clientesPostData = sheetClientesPost.getDataRange().getValues();
+      var filaClientePost = -1;
+      for (var cp = 1; cp < clientesPostData.length; cp++) {
+        if (clientesPostData[cp][0] == codigoClientePost) {
+          filaClientePost = cp + 1;
+          break;
+        }
+      }
+
+      if (filaClientePost === -1) {
+        sheetClientesPost.appendRow([codigoClientePost, nombreClientePost, "SI"]);
+      } else {
+        sheetClientesPost.getRange(filaClientePost, 2).setValue(nombreClientePost);
+        sheetClientesPost.getRange(filaClientePost, 3).setValue("SI");
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === "ocultarClientePedido") {
+      var sheetClientesOcultar = ss.getSheetByName("Clientes");
+      if (!sheetClientesOcultar) return json_(false, "No existe catalogo de clientes.");
+      var clientesOcultarData = sheetClientesOcultar.getDataRange().getValues();
+      for (var co = 1; co < clientesOcultarData.length; co++) {
+        if (clientesOcultarData[co][0] == params.codigoCliente) {
+          sheetClientesOcultar.getRange(co + 1, 3).setValue("NO");
+          break;
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === "crearPedidoCliente") {
+      var sheetPedidosPost = getOrCreateSheet_(ss, "Pedidos_Cliente", ["ID_Pedido", "Fecha_Creacion", "Cliente", "Codigo_Cliente", "Fecha_Carga", "Estado_Pedido", "Visible_App", "Nota"]);
+      var sheetDetallePost = getOrCreateSheet_(ss, "Detalle_Pedido_Cliente", ["ID_Pedido", "Area", "Producto", "Presentacion", "Unidad", "Cantidad_Pedida", "Cantidad_Completada", "Estado_Detalle", "Visible_App", "Nota"]);
+      var codigoPedido = (params.codigoCliente || "").toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      var clientePedido = (params.cliente || "").toString().trim();
+      var fechaCargaPedido = params.fechaCarga;
+      var lineasPedido = params.lineas || [];
+      if (!codigoPedido || !clientePedido) return json_(false, "Seleccione cliente.");
+      if (!fechaCargaPedido) return json_(false, "Seleccione fecha de carga.");
+      if (!lineasPedido.length) return json_(false, "Agregue al menos una linea al armado.");
+
+      var idPedidoCliente = crearIdPedidoCliente_(ss, codigoPedido, fechaCargaPedido);
+      var ahoraPedido = new Date();
+      sheetPedidosPost.appendRow([idPedidoCliente, ahoraPedido, clientePedido, codigoPedido, fechaCargaPedido, "Abierto", "SI", params.nota || ""]);
+
+      lineasPedido.forEach(function(linea) {
+        var cantidadPedida = numeroSeguro_(linea.cantidadPedida);
+        if (linea.area && linea.producto && linea.unidad && cantidadPedida > 0) {
+          sheetDetallePost.appendRow([
+            idPedidoCliente,
+            linea.area,
+            linea.producto,
+            linea.presentacion || "",
+            linea.unidad,
+            cantidadPedida,
+            0,
+            "Pendiente",
+            "SI",
+            linea.nota || ""
+          ]);
+        }
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({status: "success", idPedido: idPedidoCliente})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === "ocultarPedidoCliente") {
+      actualizarVisibilidadPedidoCliente_(ss, params.idPedido, "NO");
+      return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === "cancelarPedidoCliente") {
+      actualizarEstadoPedidoCliente_(ss, params.idPedido, "Cancelado");
+      return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === "eliminarPedidoCliente") {
+      eliminarPedidoCliente_(ss, params.idPedido);
+      return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // -- OPERATIVO: NUEVO FLUJO DE FRUTAS POR ESTADOS --
     if (params.action === "iniciarLoteFrutas") {
-      var sheetFNuevo = getOrCreateSheet_(ss, "Pedidos_Fruta", ["ID", "Fecha", "Nombre_Pedido", "Proveedor_Iniciales", "Fruta", "Peso_Neto_Entrada_Lb", "Peso_Neto_Final_Lb", "Rendimiento_Peso", "Estado_Frutas", "Peso_Averia_Lb", "Peso_Desecho_Lb", "Nota_Final", "Estado_Empaque", "Visible_App"]);
+      var sheetFNuevo = getOrCreateSheet_(ss, "Pedidos_Fruta", ["ID", "Fecha", "Nombre_Pedido", "Proveedor_Iniciales", "Fruta", "Peso_Neto_Entrada_Lb", "Peso_Neto_Final_Lb", "Rendimiento_Peso", "Estado_Frutas", "Peso_Averia_Lb", "Peso_Desecho_Lb", "Nota_Final", "Estado_Empaque", "Visible_App", "Peso_Disponible_Empaque_Lb"]);
       var sheetTNuevo = getOrCreateSheet_(ss, "Tiempos_Procesado", ["ID", "Nombre_Pedido", "Fruta", "FechaHora_Inicio", "FechaHora_Finalizacion", "Tiempo_Total_Min", "Tiempo_Pausado_Min", "Tiempo_Produccion_Min", "Motivo_Pausa", "Pausa_Activa_Desde"]);
       var pesoEntradaNuevo = numeroSeguro_(params.pesoEntrada);
       var proveedorIniciales = (params.proveedorIniciales || "").toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -176,7 +316,7 @@ function doPost(e) {
 
       var idNuevo = crearIdFrutaProveedor_(ss, proveedorIniciales);
       var ahoraInicio = new Date();
-      sheetFNuevo.appendRow([idNuevo, params.fecha || Utilities.formatDate(ahoraInicio, Session.getScriptTimeZone(), "dd/MM/yyyy"), params.nombrePedido, proveedorIniciales, params.frutaTipo, pesoEntradaNuevo, "", "", "En proceso", "", "", "", "Pendiente", "SI"]);
+      sheetFNuevo.appendRow([idNuevo, params.fecha || Utilities.formatDate(ahoraInicio, Session.getScriptTimeZone(), "dd/MM/yyyy"), params.nombrePedido, proveedorIniciales, params.frutaTipo, pesoEntradaNuevo, "", "", "En proceso", "", "", "", "Pendiente", "SI", ""]);
       sheetTNuevo.appendRow([idNuevo, params.nombrePedido, params.frutaTipo, ahoraInicio, "", 0, 0, 0, "", ""]);
       return ContentService.createTextOutput(JSON.stringify({status: "success", newId: idNuevo})).setMimeType(ContentService.MimeType.JSON);
     }
@@ -244,6 +384,7 @@ function doPost(e) {
       sheetFFin.getRange(filaFFin, 10).setValue(pesoAveriaFin);
       sheetFFin.getRange(filaFFin, 11).setValue(pesoDesechoFin);
       sheetFFin.getRange(filaFFin, 12).setValue(params.notaFinal || "");
+      sheetFFin.getRange(filaFFin, 15).setValue(pesoFinalFin);
 
       sheetTFin.getRange(filaTFin, 5).setValue(ahoraFin);
       sheetTFin.getRange(filaTFin, 6).setValue(redondearMin_(tiempoTotal));
@@ -254,6 +395,90 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
     // -- OPERATIVO: REGISTRO DE EMPAQUE --
+    if (params.action === "registroEmpaquePedido") {
+      var sheetEmpaqueSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota"]);
+      var sheetDetallePedido = ss.getSheetByName("Detalle_Pedido_Cliente");
+      var sheetPedidoCliente = ss.getSheetByName("Pedidos_Cliente");
+      var sheetFrutaEmpaque = ss.getSheetByName("Pedidos_Fruta");
+      var sheetEmpaqueSalidas = getOrCreateSheet_(ss, "Empaque_Salidas", ["ID", "Nombre_Pedido", "Fruta", "Fecha_Empaque", "Cajas", "Estado_Empaque"]);
+      if (!sheetDetallePedido || !sheetPedidoCliente || !sheetFrutaEmpaque) return json_(false, "Faltan hojas de pedidos o frutas.");
+
+      var cajasHechas = numeroEnteroSeguro_(params.cajas);
+      var presentacionLb = numeroSeguro_(params.presentacionLb);
+      var sobranteLote = numeroSeguro_(params.sobranteLoteLb);
+      if (!params.idPedidoCliente) return json_(false, "Seleccione pedido de cliente.");
+      if (!params.idLoteFruta) return json_(false, "Seleccione lote de fruta.");
+      if (!cajasHechas || cajasHechas <= 0) return json_(false, "Ingrese cajas hechas.");
+      if (!presentacionLb || presentacionLb <= 0) return json_(false, "Ingrese presentacion en libras.");
+      if (params.estadoUsoLote === "Empacado Parcial" && sobranteLote <= 0) return json_(false, "Ingrese sobrante del lote parcial.");
+
+      var filaDetallePedido = buscarFilaDetallePedido_(sheetDetallePedido, params.idPedidoCliente, params.areaDetalle, params.productoDetalle, params.presentacionDetalle, params.unidadDetalle);
+      if (filaDetallePedido === -1) return json_(false, "No se encontro la linea del armado.");
+
+      var filaLoteEmpaque = buscarFilaPorId_(sheetFrutaEmpaque, params.idLoteFruta);
+      if (filaLoteEmpaque === -1) return json_(false, "No se encontro el lote de fruta.");
+
+      var disponibleActual = numeroSeguro_(sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).getValue());
+      if (!disponibleActual) disponibleActual = numeroSeguro_(sheetFrutaEmpaque.getRange(filaLoteEmpaque, 7).getValue());
+      if (params.estadoUsoLote === "Empacado Parcial" && sobranteLote >= disponibleActual) return json_(false, "El sobrante debe ser menor al disponible actual.");
+
+      var cantidadPedidaDetalle = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 6).getValue());
+      var cantidadCompletadaDetalle = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 7).getValue()) + cajasHechas;
+      var estadoDetalle = "Parcial";
+      if (cantidadCompletadaDetalle <= 0) estadoDetalle = "Pendiente";
+      if (cantidadCompletadaDetalle >= cantidadPedidaDetalle) estadoDetalle = "Completado";
+      sheetDetallePedido.getRange(filaDetallePedido, 7).setValue(cantidadCompletadaDetalle);
+      sheetDetallePedido.getRange(filaDetallePedido, 8).setValue(estadoDetalle);
+
+      var estadoUsoLote = params.estadoUsoLote === "Empacado Parcial" ? "Empacado Parcial" : "Empacado Total";
+      sheetFrutaEmpaque.getRange(filaLoteEmpaque, 13).setValue(estadoUsoLote);
+      sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).setValue(estadoUsoLote === "Empacado Total" ? 0 : sobranteLote);
+
+      var idSesionEmpaque = crearIdSesionEmpaque_(ss);
+      var fechaEmpaque = params.fecha || new Date();
+      sheetEmpaqueSesiones.appendRow([
+        idSesionEmpaque,
+        fechaEmpaque,
+        params.idPedidoCliente,
+        params.cliente || "",
+        params.codigoCliente || "",
+        params.areaDetalle || "",
+        params.productoDetalle || "",
+        params.presentacionDetalle || "",
+        params.unidadDetalle || "",
+        cajasHechas,
+        presentacionLb,
+        params.idLoteFruta,
+        params.fruta || "",
+        estadoUsoLote,
+        estadoUsoLote === "Empacado Total" ? 0 : sobranteLote,
+        params.responsable || "",
+        params.nota || ""
+      ]);
+
+      var dataEmpaqueNueva = sheetEmpaqueSalidas.getDataRange().getValues();
+      var filaEmpaqueSalida = -1;
+      for (var es = 1; es < dataEmpaqueNueva.length; es++) {
+        if (dataEmpaqueNueva[es][0] == params.idLoteFruta) {
+          filaEmpaqueSalida = es + 1;
+          break;
+        }
+      }
+      if (filaEmpaqueSalida === -1) {
+        sheetEmpaqueSalidas.appendRow([params.idLoteFruta, params.idPedidoCliente, params.fruta || "", fechaEmpaque, cajasHechas, estadoUsoLote]);
+      } else {
+        var cajasPrevias = numeroEnteroSeguro_(sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 5).getValue());
+        sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 2).setValue(params.idPedidoCliente);
+        sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 4).setValue(fechaEmpaque);
+        sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 5).setValue(cajasPrevias + cajasHechas);
+        sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 6).setValue(estadoUsoLote);
+      }
+
+      recalcularEstadoPedidoCliente_(ss, params.idPedidoCliente);
+      calcularMateriaPrima(params.idLoteFruta);
+      return ContentService.createTextOutput(JSON.stringify({status: "success", idSesionEmpaque: idSesionEmpaque})).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (params.action === "registroEmpaque") {
       var sheetE = getOrCreateSheet_(ss, "Empaque_Salidas", ["ID", "Nombre_Pedido", "Fruta", "Fecha_Empaque", "Cajas", "Estado_Empaque"]);
       var dataE = sheetE.getDataRange().getValues();
@@ -418,6 +643,11 @@ function getOrCreateSheet_(ss, nombre, headers) {
 
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
+  } else if (headers && headers.length) {
+    var existingHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
+    for (var h = 0; h < headers.length; h++) {
+      if (!existingHeaders[h]) sheet.getRange(1, h + 1).setValue(headers[h]);
+    }
   }
   return sheet;
 }
@@ -504,6 +734,144 @@ function idExisteEnLibro_(ss, idBuscado) {
   }
   return false;
 }
+
+function crearIdPedidoCliente_(ss, codigoCliente, fechaCarga) {
+  var codigo = (codigoCliente || "CLI").toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!codigo) codigo = "CLI";
+
+  var fechaObj;
+  if (typeof fechaCarga === "string" && fechaCarga.indexOf("-") !== -1) {
+    var partes = fechaCarga.split("-");
+    fechaObj = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+  } else {
+    fechaObj = new Date(fechaCarga || new Date());
+  }
+
+  var dd = ("0" + fechaObj.getDate()).slice(-2);
+  var mm = ("0" + (fechaObj.getMonth() + 1)).slice(-2);
+  var base = codigo + "-" + dd + mm;
+
+  for (var secuencia = 1; secuencia <= 999; secuencia++) {
+    var consecutivo = ("00" + secuencia).slice(-3);
+    var id = base + "-" + consecutivo;
+    if (!idExisteEnLibro_(ss, id)) return id;
+  }
+
+  return base + "-" + new Date().getTime();
+}
+
+function actualizarVisibilidadPedidoCliente_(ss, idPedido, visibleApp) {
+  var sheetPedidos = ss.getSheetByName("Pedidos_Cliente");
+  var sheetDetalle = ss.getSheetByName("Detalle_Pedido_Cliente");
+  if (sheetPedidos) {
+    var dataPedidos = sheetPedidos.getDataRange().getValues();
+    for (var p = 1; p < dataPedidos.length; p++) {
+      if (dataPedidos[p][0] == idPedido) sheetPedidos.getRange(p + 1, 7).setValue(visibleApp);
+    }
+  }
+  if (sheetDetalle) {
+    var dataDetalle = sheetDetalle.getDataRange().getValues();
+    for (var d = 1; d < dataDetalle.length; d++) {
+      if (dataDetalle[d][0] == idPedido) sheetDetalle.getRange(d + 1, 9).setValue(visibleApp);
+    }
+  }
+}
+
+function actualizarEstadoPedidoCliente_(ss, idPedido, estado) {
+  var sheetPedidos = ss.getSheetByName("Pedidos_Cliente");
+  var sheetDetalle = ss.getSheetByName("Detalle_Pedido_Cliente");
+  if (sheetPedidos) {
+    var dataPedidos = sheetPedidos.getDataRange().getValues();
+    for (var p = 1; p < dataPedidos.length; p++) {
+      if (dataPedidos[p][0] == idPedido) sheetPedidos.getRange(p + 1, 6).setValue(estado);
+    }
+  }
+  if (estado === "Cancelado" && sheetDetalle) {
+    var dataDetalle = sheetDetalle.getDataRange().getValues();
+    for (var d = 1; d < dataDetalle.length; d++) {
+      if (dataDetalle[d][0] == idPedido) sheetDetalle.getRange(d + 1, 8).setValue("Cancelado");
+    }
+  }
+}
+
+function eliminarPedidoCliente_(ss, idPedido) {
+  ["Pedidos_Cliente", "Detalle_Pedido_Cliente"].forEach(function(nombre) {
+    var sheet = ss.getSheetByName(nombre);
+    if (!sheet) return;
+    var data = sheet.getDataRange().getValues();
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (data[i][0] == idPedido) sheet.deleteRow(i + 1);
+    }
+  });
+}
+
+function buscarFilaDetallePedido_(sheetDetalle, idPedido, area, producto, presentacion, unidad) {
+  if (!sheetDetalle || !idPedido) return -1;
+  var data = sheetDetalle.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (
+      data[i][0] == idPedido &&
+      normalizarTexto_(data[i][1]) === normalizarTexto_(area) &&
+      normalizarTexto_(data[i][2]) === normalizarTexto_(producto) &&
+      normalizarTexto_(data[i][3]) === normalizarTexto_(presentacion || "") &&
+      normalizarTexto_(data[i][4]) === normalizarTexto_(unidad)
+    ) {
+      return i + 1;
+    }
+  }
+  return -1;
+}
+
+function recalcularEstadoPedidoCliente_(ss, idPedido) {
+  var sheetPedidos = ss.getSheetByName("Pedidos_Cliente");
+  var sheetDetalle = ss.getSheetByName("Detalle_Pedido_Cliente");
+  if (!sheetPedidos || !sheetDetalle) return;
+
+  var dataDetalle = sheetDetalle.getDataRange().getValues();
+  var totalLineas = 0;
+  var lineasCompletadas = 0;
+  var lineasConAvance = 0;
+  for (var i = 1; i < dataDetalle.length; i++) {
+    if (dataDetalle[i][0] != idPedido || dataDetalle[i][8] === "NO") continue;
+    totalLineas++;
+    var pedida = numeroSeguro_(dataDetalle[i][5]);
+    var completada = numeroSeguro_(dataDetalle[i][6]);
+    var estadoLinea = "Pendiente";
+    if (completada > 0 && completada < pedida) estadoLinea = "Parcial";
+    if (pedida > 0 && completada >= pedida) estadoLinea = "Completado";
+    sheetDetalle.getRange(i + 1, 8).setValue(estadoLinea);
+    if (estadoLinea === "Completado") lineasCompletadas++;
+    if (completada > 0) lineasConAvance++;
+  }
+
+  var estadoPedido = "Abierto";
+  if (totalLineas > 0 && lineasCompletadas === totalLineas) estadoPedido = "Completado";
+  else if (lineasConAvance > 0) estadoPedido = "En proceso";
+
+  var dataPedidos = sheetPedidos.getDataRange().getValues();
+  for (var p = 1; p < dataPedidos.length; p++) {
+    if (dataPedidos[p][0] == idPedido && dataPedidos[p][5] !== "Cancelado") {
+      sheetPedidos.getRange(p + 1, 6).setValue(estadoPedido);
+      break;
+    }
+  }
+}
+
+function crearIdSesionEmpaque_(ss) {
+  var fechaObj = new Date();
+  var dd = ("0" + fechaObj.getDate()).slice(-2);
+  var mm = ("0" + (fechaObj.getMonth() + 1)).slice(-2);
+  var base = "EMP-" + dd + mm;
+
+  for (var intento = 1; intento <= 999; intento++) {
+    var consecutivo = ("00" + intento).slice(-3);
+    var id = base + "-" + consecutivo;
+    if (!idExisteEnLibro_(ss, id)) return id;
+  }
+
+  return base + "-" + new Date().getTime();
+}
+
 function crearIdFrutaProveedor_(ss, proveedorIniciales) {
   var fechaObj = new Date();
   var dd = ("0" + fechaObj.getDate()).slice(-2);

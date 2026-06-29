@@ -9,12 +9,19 @@
                 pedidosParciales = data.pedidosParciales || [];
                 historialCompleto = data.historial || [];
                 inventarioBodega = data.inventarioBodega || [];
+                clientesCatalog = data.clientes || [];
+                pedidosCliente = data.pedidosCliente || [];
+                detallePedidosCliente = data.detallePedidosCliente || [];
                 
                 renderFrutasSelect(); 
                 renderParcialesSelect(); 
                 renderEmpaqueSelect(); 
                 renderBodegaSelect();
                 renderBodegaInventory();
+                renderClientesSelect();
+                renderPedidosResumen();
+                renderPedidosCards();
+                renderClientesList();
                 renderMobileHistory(); 
                 renderGerenteLoteSelect();
                 

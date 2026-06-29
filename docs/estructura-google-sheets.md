@@ -8,6 +8,64 @@ Esta es la base esperada por `apps-script/Code.gs`.
 | --- | --- |
 | A | Fruta |
 
+## Clientes
+
+Catalogo editable por gerente para generar pedidos de cliente.
+
+| Columna | Nombre |
+| --- | --- |
+| A | Codigo_Cliente |
+| B | Nombre_Cliente |
+| C | Visible_App |
+
+## Pedidos_Cliente
+
+Encabezado general del pedido/armado.
+
+| Columna | Nombre |
+| --- | --- |
+| A | ID_Pedido |
+| B | Fecha_Creacion |
+| C | Cliente |
+| D | Codigo_Cliente |
+| E | Fecha_Carga |
+| F | Estado_Pedido |
+| G | Visible_App |
+| H | Nota |
+
+Estados de `Estado_Pedido`:
+
+- `Abierto`
+- `En proceso`
+- `Completado`
+- `Cancelado`
+
+El ID se genera con formato `CODIGO-DDMM-###`, usando el codigo del cliente y la fecha de carga.
+
+## Detalle_Pedido_Cliente
+
+Lineas del armado creado por gerencia. Varias filas pueden compartir el mismo `ID_Pedido`.
+
+| Columna | Nombre |
+| --- | --- |
+| A | ID_Pedido |
+| B | Area |
+| C | Producto |
+| D | Presentacion |
+| E | Unidad |
+| F | Cantidad_Pedida |
+| G | Cantidad_Completada |
+| H | Estado_Detalle |
+| I | Visible_App |
+| J | Nota |
+
+Estados de `Estado_Detalle`:
+
+- `Pendiente`
+- `Parcial`
+- `Completado`
+- `Cancelado`
+
 ## Pedidos_Fruta
 
 | Columna | Nombre |
@@ -26,6 +84,7 @@ Esta es la base esperada por `apps-script/Code.gs`.
 | L | Nota_Final |
 | M | Estado_Empaque |
 | N | Visible_App |
+| O | Peso_Disponible_Empaque_Lb |
 
 Estados principales de `Estado_Frutas`:
 
@@ -61,11 +120,35 @@ Estados principales de `Estado_Empaque`:
 | Columna | Nombre |
 | --- | --- |
 | A | ID |
-| B | Fecha |
-| C | Nombre_Pedido |
-| D | Fruta |
-| E | Cajas_Empacadas |
+| B | Nombre_Pedido |
+| C | Fruta |
+| D | Fecha_Empaque |
+| E | Cajas |
 | F | Estado_Empaque |
+
+## Empaque_Sesiones
+
+Registro detallado de cada sesion de empaque vinculada a un pedido de cliente y a un lote de fruta.
+
+| Columna | Nombre |
+| --- | --- |
+| A | ID_Sesion_Empaque |
+| B | Fecha |
+| C | ID_Pedido_Cliente |
+| D | Cliente |
+| E | Codigo_Cliente |
+| F | Area_Detalle |
+| G | Producto_Detalle |
+| H | Presentacion_Detalle |
+| I | Unidad |
+| J | Cajas_Hechas |
+| K | Presentacion_Lb |
+| L | ID_Lote_Fruta |
+| M | Fruta |
+| N | Estado_Uso_Lote |
+| O | Sobrante_Lote_Lb |
+| P | Responsable |
+| Q | Nota |
 
 ## Inventario_Bodega
 

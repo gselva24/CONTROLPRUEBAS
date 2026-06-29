@@ -11,8 +11,9 @@ Aplicacion web para registrar y consultar operaciones de planta: frutas, empaque
 - `js/state.js`: estado compartido en memoria para catalogos, lotes, historial e inventario.
 - `js/api.js`: sincronizacion con Apps Script y operaciones compartidas de guardado.
 - `js/modules/frutas.js`: flujo de lotes de frutas.
-- `js/modules/empaque.js`: flujo de empaque.
+- `js/modules/empaque.js`: flujo de empaque vinculado a pedidos de cliente, lineas de armado y lotes de fruta.
 - `js/modules/bodega.js`: flujo de bodega e inventario.
+- `js/modules/pedidos.js`: pedidos de cliente, armados, catalogo de clientes y progreso.
 - `js/modules/historial.js`: tarjetas de historial y trazabilidad.
 - `js/modules/admin.js`: acciones de gerente, catalogo y gestion de lotes.
 - `apps-script/Code.gs`: backend de Google Apps Script para leer/escribir en Google Sheets.

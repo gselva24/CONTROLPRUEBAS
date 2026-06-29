@@ -39,6 +39,11 @@
                     <div class="text-left"><span class="block font-black text-lg">Bodega / Inventario</span></div>
                     <span class="text-slate-500 font-bold">></span>
                 </button>
+                <button onclick="switchView('pedidos')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
+                    <span class="text-xl font-black text-emerald-400">PED</span>
+                    <div class="text-left"><span class="block font-black text-lg">Pedidos / Armados</span></div>
+                    <span class="text-slate-500 font-bold">></span>
+                </button>
                 <button onclick="switchView('historial')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
                     <span class="text-3xl">📋</span>
                     <div class="text-left"><span class="block font-black text-lg">Trazabilidad</span></div>
@@ -119,26 +124,49 @@
                 <h2 class="text-lg font-extrabold text-amber-400">📦 Área de Empaque</h2>
                 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Seleccionar Lote a Empacar:</label>
-                    <select id="e-pedido-select" onchange="actualizarInfoEmpaque()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm text-amber-200 font-medium"></select>
-                </div>
-
-                <div id="e-info-box" class="hidden bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs">
-                    <span class="block text-slate-400 mb-1">Estado de la Fruta en Producción:</span>
-                    <span id="e-info-status" class="font-black px-2 py-1 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700/50"></span>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Pedido de cliente:</label>
+                    <select id="e-pedido-cliente-select" onchange="renderEmpaqueDetalleSelect()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm text-amber-200 font-medium"></select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Estado de este Empaque:</label>
-                    <select id="e-estado-cierre" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
-                        <option value="Empacado Total">Empacado Completamente (Finalizado)</option>
-                        <option value="Empacado Parcial">Empacado Parcialmente (Dejar Abierto)</option>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Línea del armado:</label>
+                    <select id="e-detalle-pedido-select" onchange="actualizarInfoPedidoEmpaque()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Lote de fruta disponible:</label>
+                    <select id="e-lote-fruta-select" onchange="actualizarInfoEmpaque()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm text-amber-200 font-medium"></select>
+                </div>
+
+                <div id="e-info-box" class="hidden bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs space-y-1"></div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Presentación (lb/caja):</label>
+                        <input type="number" id="e-presentacion-lb" placeholder="10" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cajas hechas:</label>
+                        <input type="number" id="e-cajas" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Uso del lote:</label>
+                    <select id="e-estado-uso-lote" onchange="actualizarCamposUsoLote()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                        <option value="Empacado Total">Lote utilizado completo</option>
+                        <option value="Empacado Parcial">Lote utilizado parcial</option>
                     </select>
                 </div>
-                
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cajas empacadas en esta sesión:</label>
-                    <input type="number" id="e-cajas" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+
+                <div id="e-sobrante-box" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Sobrante declarado del lote (lb):</label>
+                    <input type="number" id="e-sobrante-lb" placeholder="0.00" class="w-full px-4 py-3 bg-slate-900 border border-amber-600 rounded-xl text-sm outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 gap-3">
+                    <input type="text" id="e-responsable" placeholder="Responsable" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                    <input type="text" id="e-nota" placeholder="Nota / referencia" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                 </div>
                 
                 <button onclick="submitEmpaque()" class="w-full bg-amber-500 text-slate-900 font-black py-4 rounded-xl text-sm uppercase shadow-lg shadow-amber-900/30">Guardar Empaque</button>
@@ -216,6 +244,85 @@
             </div>
         </section>
 
+        <section id="view-pedidos" class="app-view hidden space-y-4">
+            <div class="flex justify-between items-center">
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
+                <h2 class="text-lg font-extrabold text-emerald-400">Pedidos / Armados</h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                    <span class="block text-slate-400 font-bold uppercase text-[9px]">Abiertos</span>
+                    <span id="p-resumen-abiertos" class="text-2xl font-black text-amber-300">0</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                    <span class="block text-slate-400 font-bold uppercase text-[9px]">En proceso</span>
+                    <span id="p-resumen-proceso" class="text-2xl font-black text-sky-300">0</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                    <span class="block text-slate-400 font-bold uppercase text-[9px]">Completados</span>
+                    <span id="p-resumen-completados" class="text-2xl font-black text-emerald-300">0</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                    <span class="block text-slate-400 font-bold uppercase text-[9px]">Carga hoy</span>
+                    <span id="p-resumen-hoy" class="text-2xl font-black text-indigo-300">0</span>
+                </div>
+            </div>
+
+            <div id="p-admin-panel" class="hidden bg-slate-800 p-5 rounded-2xl border border-emerald-500/30 shadow-xl space-y-4">
+                <div class="bg-slate-900/60 p-2 rounded-xl flex gap-2 text-xs">
+                    <button id="p-mode-list-btn" onclick="setPedidosMode('lista')" class="flex-1 py-2 rounded-lg font-bold bg-emerald-600 text-white">Ver pedidos</button>
+                    <button id="p-mode-create-btn" onclick="setPedidosMode('crear')" class="flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Crear pedido</button>
+                    <button id="p-mode-clients-btn" onclick="setPedidosMode('clientes')" class="flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Clientes</button>
+                </div>
+
+                <div id="p-create-panel" class="hidden space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cliente / Código:</label>
+                        <select id="p-cliente-select" onchange="actualizarInfoClientePedido()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                    </div>
+                    <div id="p-cliente-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-300"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Fecha de carga:</label>
+                            <input type="date" id="p-fecha-carga" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Nota:</label>
+                            <input type="text" id="p-nota" placeholder="Referencia opcional" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-700 pt-4 space-y-3">
+                        <h3 class="text-xs font-black text-emerald-300 uppercase">Detalle del armado</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="p-linea-area" placeholder="Área: Empaque" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            <input type="text" id="p-linea-producto" placeholder="Producto/fruta" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            <input type="text" id="p-linea-presentacion" placeholder="Presentación: Caja 10 lb" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            <input type="text" id="p-linea-unidad" placeholder="Unidad: cajas" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        </div>
+                        <input type="number" id="p-linea-cantidad" placeholder="Cantidad pedida" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <button onclick="agregarLineaPedido()" class="w-full bg-slate-700 text-white font-black py-3 rounded-xl text-xs uppercase">Agregar línea</button>
+                        <div id="p-lineas-form" class="space-y-2 text-xs"></div>
+                    </div>
+
+                    <button onclick="submitPedidoCliente()" class="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-sm uppercase shadow-lg shadow-emerald-900/30">Guardar pedido</button>
+                </div>
+
+                <div id="p-clientes-panel" class="hidden space-y-3">
+                    <h3 class="text-xs font-black text-emerald-300 uppercase">Catálogo de clientes</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="p-cliente-codigo-nuevo" placeholder="Código" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm uppercase outline-none">
+                        <input type="text" id="p-cliente-nombre-nuevo" placeholder="Nombre del cliente" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                    </div>
+                    <button onclick="agregarClientePedido()" class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Agregar cliente</button>
+                    <div id="p-clientes-list" class="space-y-2 text-xs"></div>
+                </div>
+            </div>
+
+            <div id="p-cards-container" class="space-y-3"></div>
+        </section>
+
         <section id="view-historial" class="app-view hidden space-y-4">
             <div class="flex justify-between items-center">
                 <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
@@ -235,10 +342,11 @@
         </section>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid grid-cols-4 gap-1 z-50 shadow-2xl backdrop-blur-lg">
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid grid-cols-5 gap-1 z-50 shadow-2xl backdrop-blur-lg">
         <button onclick="switchView('frutas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">🍓</span><span class="text-[9px]">Frutas</span></button>
         <button onclick="switchView('empaque')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📦</span><span class="text-[9px]">Empaque</span></button>
         <button onclick="switchView('bodega')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">INV</span><span class="text-[9px]">Bodega</span></button>
+        <button onclick="switchView('pedidos')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">PED</span><span class="text-[9px]">Pedidos</span></button>
         <button onclick="switchView('historial')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📋</span><span class="text-[9px]">Historial</span></button>
     </nav>
     <script src="js/config.js"></script>
@@ -247,6 +355,7 @@
     <script src="js/modules/frutas.js"></script>
     <script src="js/modules/empaque.js"></script>
     <script src="js/modules/bodega.js"></script>
+    <script src="js/modules/pedidos.js"></script>
     <script src="js/modules/historial.js"></script>
     <script src="js/modules/admin.js"></script>
     <script src="js/app.js"></script>

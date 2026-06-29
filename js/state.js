@@ -4,6 +4,9 @@
         let pedidosParciales = []; 
         let historialCompleto = [];
         let inventarioBodega = [];
+        let clientesCatalog = [];
+        let pedidosCliente = [];
+        let detallePedidosCliente = [];
         let bodegaNuevoMode = false;
         
         let isRetomadoMode = false; 
