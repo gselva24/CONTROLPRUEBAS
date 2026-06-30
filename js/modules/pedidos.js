@@ -1,5 +1,6 @@
 let pedidoLineasForm = [];
 let pedidoDetalleExpandido = "";
+let pedidoClienteLineasId = "";
 
 function formatearFechaCargaPedido(valor) {
     if (!valor) return "Sin fecha";
@@ -24,78 +25,110 @@ function actualizarVistaPedidosGerente() {
     if (!adminPanel) return;
     adminPanel.classList.toggle('hidden', !isAdmin);
     renderClientesList();
+    renderProductosAdmin();
 }
 
 function setPedidosMode(mode) {
     document.getElementById('p-create-panel').classList.toggle('hidden', mode !== 'crear');
     document.getElementById('p-clientes-panel').classList.toggle('hidden', mode !== 'clientes');
+    document.getElementById('p-products-panel').classList.toggle('hidden', mode !== 'productos');
 
-    document.getElementById('p-mode-list-btn').className = mode === 'lista'
-        ? "flex-1 py-2 rounded-lg font-bold bg-emerald-600 text-white"
-        : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-    document.getElementById('p-mode-create-btn').className = mode === 'crear'
-        ? "flex-1 py-2 rounded-lg font-bold bg-emerald-600 text-white"
-        : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
-    document.getElementById('p-mode-clients-btn').className = mode === 'clientes'
-        ? "flex-1 py-2 rounded-lg font-bold bg-emerald-600 text-white"
-        : "flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
+    ["lista", "crear", "clientes", "productos"].forEach(nombre => {
+        document.getElementById(`p-mode-${nombre === "crear" ? "create" : nombre === "clientes" ? "clients" : nombre === "productos" ? "products" : "list"}-btn`).className = nombre === mode
+            ? "py-2 rounded-lg font-bold bg-emerald-600 text-white"
+            : "py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
+    });
 
     if (mode === 'crear' && !document.getElementById('p-fecha-carga').value) {
         document.getElementById('p-fecha-carga').valueAsDate = new Date();
     }
+    if (mode === 'productos') renderProductosAdmin();
 }
 
 function renderClientesSelect() {
     const select = document.getElementById('p-cliente-select');
     if (!select) return;
+    const valorActual = select.value;
     select.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
     clientesCatalog
         .filter(c => c.visibleApp !== "NO")
         .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)))
         .forEach(c => {
-            select.innerHTML += `<option value="${c.codigo}">${c.codigo} - ${c.nombre}</option>`;
+            select.innerHTML += `<option value="${c.idCliente || c.codigo}">${c.codigo} - ${c.nombre}</option>`;
         });
+    if (Array.from(select.options || []).some(option => option.value === valorActual)) select.value = valorActual;
+    renderClientesProductosSelect();
     actualizarInfoClientePedido();
 }
 
+function buscarClienteSeleccionado(valor) {
+    return clientesCatalog.find(c => c.idCliente === valor || c.codigo === valor) || null;
+}
+
 function actualizarInfoClientePedido() {
-    const codigo = document.getElementById('p-cliente-select').value;
+    const seleccion = document.getElementById('p-cliente-select').value;
     const info = document.getElementById('p-cliente-info');
-    const cliente = clientesCatalog.find(c => c.codigo === codigo);
+    const cliente = buscarClienteSeleccionado(seleccion);
+    if (pedidoLineasForm.length && pedidoClienteLineasId && seleccion !== pedidoClienteLineasId) {
+        pedidoLineasForm = [];
+        pedidoClienteLineasId = "";
+        renderPedidoLineasForm();
+    }
     if (!cliente) {
         info.classList.add('hidden');
+        renderProductosPedidoSelect();
         return;
     }
     info.innerHTML = `<span class="text-slate-400">Cliente:</span> <span class="font-black text-emerald-300">${cliente.nombre}</span><br><span class="text-slate-400">Código:</span> <span class="font-mono font-bold">${cliente.codigo}</span>`;
     info.classList.remove('hidden');
+    renderProductosPedidoSelect();
 }
 
-function actualizarCampoProductoPedido() {
-    const areaInput = document.getElementById('p-linea-area');
-    const productoInput = document.getElementById('p-linea-producto');
-    const frutaSelect = document.getElementById('p-linea-fruta');
-    if (!areaInput || !productoInput || !frutaSelect) return;
-
-    const esEmpaque = normalizarTextoFront(areaInput.value) === "empaque";
-    productoInput.classList.toggle('hidden', esEmpaque);
-    frutaSelect.classList.toggle('hidden', !esEmpaque);
-
-    if (esEmpaque) {
-        const valorActual = frutaSelect.value;
-        frutaSelect.innerHTML = '<option value="">-- Seleccionar fruta del catálogo --</option>';
-        frutasCatalog.forEach(fruta => {
-            frutaSelect.innerHTML += `<option value="${fruta}">${fruta}</option>`;
-        });
-        if (frutasCatalog.includes(valorActual)) frutaSelect.value = valorActual;
-    }
+function productoGeneralPorId(idProducto) {
+    return productosCatalog.find(p => p.idProducto === idProducto) || null;
 }
 
-function obtenerProductoLineaPedido() {
-    const area = document.getElementById('p-linea-area').value;
-    if (normalizarTextoFront(area) === "empaque") {
-        return document.getElementById('p-linea-fruta').value.trim();
+function productoClientePorId(idProductoCliente) {
+    return productosClienteCatalog.find(p => p.idProductoCliente === idProductoCliente) || null;
+}
+
+function renderProductosPedidoSelect() {
+    const select = document.getElementById('p-linea-producto-cliente');
+    if (!select) return;
+    const cliente = buscarClienteSeleccionado(document.getElementById('p-cliente-select').value);
+    const valorActual = select.value;
+    select.innerHTML = '<option value="">-- Seleccionar producto --</option>';
+    if (cliente) {
+        productosClienteCatalog
+            .filter(rel => rel.idCliente === cliente.idCliente && rel.visibleApp !== "NO")
+            .filter(rel => {
+                const producto = productoGeneralPorId(rel.idProducto);
+                return producto && producto.visibleApp !== "NO";
+            })
+            .sort((a, b) => a.nombreComercial.localeCompare(b.nombreComercial))
+            .forEach(rel => {
+                const producto = productoGeneralPorId(rel.idProducto);
+                select.innerHTML += `<option value="${rel.idProductoCliente}">${rel.nombreComercial} · ${producto.presentacion}</option>`;
+            });
     }
-    return document.getElementById('p-linea-producto').value.trim();
+    if (Array.from(select.options || []).some(option => option.value === valorActual)) select.value = valorActual;
+    actualizarInfoProductoPedido();
+}
+
+function actualizarInfoProductoPedido() {
+    const info = document.getElementById('p-linea-producto-info');
+    const relacion = productoClientePorId(document.getElementById('p-linea-producto-cliente').value);
+    const producto = relacion ? productoGeneralPorId(relacion.idProducto) : null;
+    if (!relacion || !producto) {
+        info.classList.add('hidden');
+        return;
+    }
+    info.innerHTML = `
+        <span class="block font-black text-emerald-300">${relacion.nombreComercial}</span>
+        <span class="text-slate-400">${producto.nombreBase} · ${producto.presentacion}</span><br>
+        <span class="text-slate-500">Área:</span> ${producto.area}
+        ${producto.productoBaseProduccion ? `<br><span class="text-slate-500">Base de producción:</span> ${producto.productoBaseProduccion}` : ""}`;
+    info.classList.remove('hidden');
 }
 
 function renderClientesList() {
@@ -127,35 +160,160 @@ function agregarClientePedido() {
         action: "guardarClientePedido",
         codigoCliente: codigo,
         nombreCliente: nombre
-    }, "Cliente guardado.");
+    }, "Cliente guardado.", "clientes");
 }
 
 function ocultarClientePedido(codigo) {
     if (!isAdmin) { alert("Active modo gerente."); return; }
     if (!confirm("¿Ocultar este cliente del menú?")) return;
-    postPedidos({ action: "ocultarClientePedido", codigoCliente: codigo }, "Cliente ocultado.");
+    postPedidos({ action: "ocultarClientePedido", codigoCliente: codigo }, "Cliente ocultado.", "clientes");
+}
+
+function renderClientesProductosSelect() {
+    const select = document.getElementById('p-producto-cliente-select');
+    if (!select) return;
+    const valorActual = select.value;
+    select.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
+    clientesCatalog
+        .filter(c => c.visibleApp !== "NO")
+        .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)))
+        .forEach(c => {
+            select.innerHTML += `<option value="${c.idCliente}">${c.codigo} - ${c.nombre}</option>`;
+        });
+    if (Array.from(select.options || []).some(option => option.value === valorActual)) select.value = valorActual;
+}
+
+function renderProductosAdmin() {
+    const generalSelect = document.getElementById('p-producto-general-select');
+    const list = document.getElementById('p-productos-list');
+    const baseOptions = document.getElementById('p-productos-base-options');
+    if (!generalSelect || !list || !baseOptions) return;
+
+    baseOptions.innerHTML = frutasCatalog.map(fruta => `<option value="${fruta}"></option>`).join("");
+    generalSelect.innerHTML = '<option value="">-- Seleccionar producto general --</option>';
+    const activos = productosCatalog
+        .filter(p => p.visibleApp !== "NO")
+        .sort((a, b) => a.nombreBase.localeCompare(b.nombreBase));
+    activos.forEach(producto => {
+        generalSelect.innerHTML += `<option value="${producto.idProducto}">${producto.nombreBase} · ${producto.presentacion}</option>`;
+    });
+
+    list.innerHTML = activos.length ? "" : '<p class="text-center text-slate-500 py-2">No hay productos generales.</p>';
+    activos.forEach(producto => {
+        list.innerHTML += `
+            <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-lg p-3">
+                <div class="min-w-0">
+                    <span class="block font-black text-slate-100">${producto.nombreBase}</span>
+                    <span class="block text-[10px] text-slate-400">${producto.presentacion} · ${producto.area}</span>
+                    ${producto.productoBaseProduccion ? `<span class="block text-[9px] text-slate-500">Base: ${producto.productoBaseProduccion}</span>` : ""}
+                </div>
+                <button onclick="ocultarProductoGeneral('${producto.idProducto}')" class="text-rose-300 text-[10px] font-black uppercase">Ocultar</button>
+            </div>`;
+    });
+    renderClientesProductosSelect();
+    renderProductosClienteList();
+}
+
+function renderProductosClienteList() {
+    const list = document.getElementById('p-productos-cliente-list');
+    const selectCliente = document.getElementById('p-producto-cliente-select');
+    if (!list || !selectCliente) return;
+    const idCliente = selectCliente.value;
+    const relaciones = productosClienteCatalog
+        .filter(rel => rel.idCliente === idCliente && rel.visibleApp !== "NO")
+        .sort((a, b) => a.nombreComercial.localeCompare(b.nombreComercial));
+    list.innerHTML = relaciones.length ? "" : '<p class="text-center text-slate-500 py-2">No hay productos asignados a este cliente.</p>';
+    relaciones.forEach(rel => {
+        const producto = productoGeneralPorId(rel.idProducto);
+        list.innerHTML += `
+            <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-lg p-3">
+                <div class="min-w-0">
+                    <span class="block font-black text-slate-100">${rel.nombreComercial}</span>
+                    <span class="block text-[10px] text-slate-400">${producto ? `${producto.nombreBase} · ${producto.presentacion}` : "Producto no disponible"}</span>
+                </div>
+                <button onclick="ocultarProductoCliente('${rel.idProductoCliente}')" class="text-rose-300 text-[10px] font-black uppercase">Ocultar</button>
+            </div>`;
+    });
+}
+
+function agregarProductoGeneral() {
+    if (!isAdmin) { alert("Active modo gerente."); return; }
+    const nombreBase = document.getElementById('p-producto-base-nombre').value.trim();
+    const presentacion = document.getElementById('p-producto-presentacion').value.trim();
+    const area = document.getElementById('p-producto-area').value.trim();
+    const productoBaseProduccion = document.getElementById('p-producto-base-produccion').value.trim();
+    if (!nombreBase || !presentacion || !area) {
+        alert("Ingrese nombre base, presentación y área.");
+        return;
+    }
+    if (normalizarTextoFront(area) === "empaque" && !productoBaseProduccion) {
+        alert("Para Empaque seleccione la fruta base de producción.");
+        return;
+    }
+    postPedidos({
+        action: "guardarProductoGeneral",
+        nombreBase,
+        presentacion,
+        area,
+        productoBaseProduccion
+    }, "Producto general guardado.", "productos");
+}
+
+function asignarProductoCliente() {
+    if (!isAdmin) { alert("Active modo gerente."); return; }
+    const idCliente = document.getElementById('p-producto-cliente-select').value;
+    const idProducto = document.getElementById('p-producto-general-select').value;
+    const nombreComercial = document.getElementById('p-producto-nombre-comercial').value.trim();
+    if (!idCliente || !idProducto || !nombreComercial) {
+        alert("Seleccione cliente, producto e ingrese el nombre comercial.");
+        return;
+    }
+    postPedidos({
+        action: "guardarProductoCliente",
+        idCliente,
+        idProducto,
+        nombreComercial
+    }, "Producto asignado al cliente.", "productos");
+}
+
+function ocultarProductoGeneral(idProducto) {
+    if (!isAdmin) { alert("Active modo gerente."); return; }
+    if (!confirm("¿Ocultar este producto general?")) return;
+    postPedidos({ action: "ocultarProductoGeneral", idProducto }, "Producto ocultado.", "productos");
+}
+
+function ocultarProductoCliente(idProductoCliente) {
+    if (!isAdmin) { alert("Active modo gerente."); return; }
+    if (!confirm("¿Ocultar este producto del catálogo del cliente?")) return;
+    postPedidos({ action: "ocultarProductoCliente", idProductoCliente }, "Producto del cliente ocultado.", "productos");
 }
 
 function agregarLineaPedido() {
-    const area = document.getElementById('p-linea-area').value.trim();
-    const producto = obtenerProductoLineaPedido();
-    const presentacion = document.getElementById('p-linea-presentacion').value.trim();
-    const unidad = document.getElementById('p-linea-unidad').value.trim();
-    const cantidad = Number(document.getElementById('p-linea-cantidad').value);
+    const idProductoCliente = document.getElementById('p-linea-producto-cliente').value;
+    const relacion = productoClientePorId(idProductoCliente);
+    const productoGeneral = relacion ? productoGeneralPorId(relacion.idProducto) : null;
+    const cantidad = Math.floor(Number(document.getElementById('p-linea-cantidad').value));
 
-    if (!area || !producto || !unidad || !cantidad || cantidad <= 0) {
-        alert("Ingrese área, producto, unidad y cantidad pedida.");
+    if (!relacion || !productoGeneral || !cantidad || cantidad <= 0) {
+        alert("Seleccione producto e ingrese una cantidad válida de cajas.");
         return;
     }
 
-    pedidoLineasForm.push({ area, producto, presentacion, unidad, cantidadPedida: cantidad, nota: "" });
-    document.getElementById('p-linea-area').value = "";
-    document.getElementById('p-linea-producto').value = "";
-    document.getElementById('p-linea-fruta').value = "";
-    document.getElementById('p-linea-presentacion').value = "";
-    document.getElementById('p-linea-unidad').value = "";
+    pedidoLineasForm.push({
+        idProductoCliente: relacion.idProductoCliente,
+        idProducto: productoGeneral.idProducto,
+        area: productoGeneral.area,
+        producto: relacion.nombreComercial,
+        presentacion: productoGeneral.presentacion,
+        unidad: "cajas",
+        productoBaseProduccion: productoGeneral.productoBaseProduccion || "",
+        cantidadPedida: cantidad,
+        nota: ""
+    });
+    pedidoClienteLineasId = document.getElementById('p-cliente-select').value;
+    document.getElementById('p-linea-producto-cliente').value = "";
     document.getElementById('p-linea-cantidad').value = "";
-    actualizarCampoProductoPedido();
+    actualizarInfoProductoPedido();
     renderPedidoLineasForm();
 }
 
@@ -171,8 +329,9 @@ function renderPedidoLineasForm() {
         container.innerHTML += `
             <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-xl p-3">
                 <div>
-                    <span class="block font-black text-slate-100">${linea.area} · ${linea.producto}</span>
-                    <span class="block text-[10px] text-slate-400">${linea.presentacion || 'Sin presentación'} · ${linea.cantidadPedida} ${linea.unidad}</span>
+                    <span class="block font-black text-slate-100">${linea.producto}</span>
+                    <span class="block text-[10px] text-slate-400">${linea.presentacion || 'Sin presentación'} · ${linea.area}</span>
+                    <span class="block text-[10px] font-bold text-emerald-300">${linea.cantidadPedida} cajas</span>
                 </div>
                 <button onclick="eliminarLineaPedido(${index})" class="text-rose-300 text-[10px] font-black uppercase">Quitar</button>
             </div>`;
@@ -183,17 +342,17 @@ function resetPedidoForm() {
     document.getElementById('p-cliente-select').value = "";
     document.getElementById('p-fecha-carga').value = "";
     document.getElementById('p-nota').value = "";
-    document.getElementById('p-cliente-codigo-nuevo').value = "";
-    document.getElementById('p-cliente-nombre-nuevo').value = "";
+    document.getElementById('p-linea-producto-cliente').value = "";
+    document.getElementById('p-linea-cantidad').value = "";
     pedidoLineasForm = [];
+    pedidoClienteLineasId = "";
     renderPedidoLineasForm();
-    renderClientesSelect();
+    actualizarInfoClientePedido();
 }
 
 function submitPedidoCliente() {
     if (!isAdmin) { alert("Active modo gerente."); return; }
-    const codigo = document.getElementById('p-cliente-select').value;
-    const cliente = clientesCatalog.find(c => c.codigo === codigo);
+    const cliente = buscarClienteSeleccionado(document.getElementById('p-cliente-select').value);
     const fechaCarga = document.getElementById('p-fecha-carga').value;
     if (!cliente) { alert("Seleccione un cliente."); return; }
     if (!fechaCarga) { alert("Seleccione fecha de carga."); return; }
@@ -201,15 +360,28 @@ function submitPedidoCliente() {
 
     postPedidos({
         action: "crearPedidoCliente",
-        cliente: cliente.nombre,
-        codigoCliente: cliente.codigo,
+        idCliente: cliente.idCliente,
         fechaCarga: fechaCarga,
         nota: document.getElementById('p-nota').value.trim(),
         lineas: pedidoLineasForm
     }, "Pedido guardado.");
 }
 
-function postPedidos(payload, successMessage) {
+function limpiarFormularioCatalogo(mode) {
+    if (mode === "clientes") {
+        document.getElementById('p-cliente-codigo-nuevo').value = "";
+        document.getElementById('p-cliente-nombre-nuevo').value = "";
+    }
+    if (mode === "productos") {
+        document.getElementById('p-producto-base-nombre').value = "";
+        document.getElementById('p-producto-presentacion').value = "";
+        document.getElementById('p-producto-area').value = "";
+        document.getElementById('p-producto-base-produccion').value = "";
+        document.getElementById('p-producto-nombre-comercial').value = "";
+    }
+}
+
+function postPedidos(payload, successMessage, modeAfter = "lista") {
     document.getElementById('global-status').innerText = "Guardando...";
     fetch(GOOGLE_SHEETS_URL, {
         method: "POST",
@@ -227,8 +399,9 @@ function postPedidos(payload, successMessage) {
                 mensaje += ` Se liberaron ${resData.lotesLiberados.length} lote(s) y ${pesoLiberado.toLocaleString('es-GT', { maximumFractionDigits: 2 })} lb.`;
             }
             alert(mensaje);
-            resetPedidoForm();
-            setPedidosMode('lista');
+            if (payload.action === "crearPedidoCliente") resetPedidoForm();
+            limpiarFormularioCatalogo(modeAfter);
+            setPedidosMode(modeAfter);
             fetchDataFromCloud();
         }
     })

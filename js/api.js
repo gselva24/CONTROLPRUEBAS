@@ -10,8 +10,11 @@
                 historialCompleto = data.historial || [];
                 inventarioBodega = data.inventarioBodega || [];
                 clientesCatalog = data.clientes || [];
+                productosCatalog = data.productos || [];
+                productosClienteCatalog = data.productosCliente || [];
                 pedidosCliente = data.pedidosCliente || [];
                 detallePedidosCliente = data.detallePedidosCliente || [];
+                asignacionesPedido = data.asignacionesPedido || [];
                 empaqueSesiones = data.empaqueSesiones || [];
                 
                 renderFrutasSelect(); 
@@ -20,7 +23,8 @@
                 renderBodegaSelect();
                 renderBodegaInventory();
                 renderClientesSelect();
-                actualizarCampoProductoPedido();
+                renderProductosPedidoSelect();
+                renderProductosAdmin();
                 renderPedidosResumen();
                 renderPedidosCards();
                 renderClientesList();

@@ -50,17 +50,30 @@ const context = vm.createContext({
 elements["e-pedido-cliente-select"] = element();
 elements["e-pedido-cliente-select"].value = "CLI-0107-001";
 elements["e-detalle-pedido-select"] = element();
-elements["e-detalle-pedido-select"].value = "0";
+elements["e-detalle-pedido-select"].value = "LIN-001";
 elements["e-lote-fruta-select"] = element();
 
 vm.runInContext(`
-    detallePedidosCliente = [{
-        idPedido: "CLI-0107-001",
-        area: "Empaque",
-        producto: "Nance",
-        estadoDetalle: "Pendiente",
-        visibleApp: "SI"
-    }];
+    detallePedidosCliente = [
+        {
+            idPedido: "CLI-0107-001",
+            idLinea: "LIN-001",
+            area: "Empaque",
+            producto: "NANCE 12x15 oz.",
+            productoBaseProduccion: "Nance",
+            estadoDetalle: "Pendiente",
+            visibleApp: "SI"
+        },
+        {
+            idPedido: "CLI-0107-001",
+            idLinea: "LIN-002",
+            area: "Empaque",
+            producto: "NANCE 12x15 oz.",
+            productoBaseProduccion: "Nance",
+            estadoDetalle: "Pendiente",
+            visibleApp: "SI"
+        }
+    ];
     pedidosPendientes = [
         { id: "L-NANCE", fruta: "Nance", visibleApp: "SI", estadoFrutas: "Finalizado", estadoEmpaqueGlobal: "Pendiente", pesoProcesado: 100 },
         { id: "L-MAMEY", fruta: "Mamey", visibleApp: "SI", estadoFrutas: "Finalizado", estadoEmpaqueGlobal: "Pendiente", pesoProcesado: 100 }
@@ -70,6 +83,50 @@ vm.runInContext(`
 
 assert.match(elements["e-lote-fruta-select"].innerHTML, /L-NANCE/);
 assert.doesNotMatch(elements["e-lote-fruta-select"].innerHTML, /L-MAMEY/);
+elements["e-detalle-pedido-select"].value = "LIN-002";
+assert.equal(vm.runInContext("buscarDetalleEmpaqueSeleccionado().idLinea", context), "LIN-002");
+
+elements["p-cliente-select"] = element();
+elements["p-cliente-select"].value = "CLI-UUID";
+elements["p-linea-producto-cliente"] = element();
+elements["p-linea-producto-info"] = element();
+elements["p-linea-cantidad"] = element();
+elements["p-lineas-form"] = element();
+
+vm.runInContext(`
+    clientesCatalog = [{
+        idCliente: "CLI-UUID",
+        codigo: "CLI",
+        nombre: "Cliente Prueba",
+        visibleApp: "SI"
+    }];
+    productosCatalog = [{
+        idProducto: "PROD-UUID",
+        nombreBase: "Nance",
+        presentacion: "12x15 oz.",
+        area: "Empaque",
+        productoBaseProduccion: "Nance",
+        visibleApp: "SI"
+    }];
+    productosClienteCatalog = [{
+        idProductoCliente: "SKU-UUID",
+        idCliente: "CLI-UUID",
+        idProducto: "PROD-UUID",
+        nombreComercial: "NANCE DIAMOND ROCK 12x15 oz.",
+        visibleApp: "SI"
+    }];
+    renderProductosPedidoSelect();
+`, context);
+
+assert.match(elements["p-linea-producto-cliente"].innerHTML, /NANCE DIAMOND ROCK/);
+elements["p-linea-producto-cliente"].value = "SKU-UUID";
+elements["p-linea-cantidad"].value = "12";
+vm.runInContext("actualizarInfoProductoPedido(); agregarLineaPedido();", context);
+const lineaCatalogo = JSON.parse(vm.runInContext("JSON.stringify(pedidoLineasForm[0])", context));
+assert.equal(lineaCatalogo.idProductoCliente, "SKU-UUID");
+assert.equal(lineaCatalogo.productoBaseProduccion, "Nance");
+assert.equal(lineaCatalogo.cantidadPedida, 12);
+assert.equal(lineaCatalogo.unidad, "cajas");
 
 elements["cards-container"] = element();
 

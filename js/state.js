@@ -5,8 +5,11 @@
         let historialCompleto = [];
         let inventarioBodega = [];
         let clientesCatalog = [];
+        let productosCatalog = [];
+        let productosClienteCatalog = [];
         let pedidosCliente = [];
         let detallePedidosCliente = [];
+        let asignacionesPedido = [];
         let empaqueSesiones = [];
         let bodegaNuevoMode = false;
         

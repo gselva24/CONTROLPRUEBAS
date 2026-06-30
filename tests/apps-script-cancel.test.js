@@ -96,9 +96,17 @@ class MockSpreadsheet {
         return this.sheets[name] || null;
     }
 
+    getSheets() {
+        return Object.values(this.sheets);
+    }
+
     insertSheet(name) {
         this.sheets[name] = new MockSheet([]);
         return this.sheets[name];
+    }
+
+    getId() {
+        return "TEST-SPREADSHEET";
     }
 }
 
@@ -110,6 +118,21 @@ const sessionHeaders = [
 ];
 
 const sheets = {
+    Clientes: new MockSheet([
+        ["Codigo_Cliente", "Nombre_Cliente", "Visible_App"],
+        ["C1", "Cliente 1", "SI"],
+        ["C2", "Cliente 2", "SI"]
+    ]),
+    Pedidos_Cliente: new MockSheet([
+        ["ID_Pedido", "Fecha_Creacion", "Cliente", "Codigo_Cliente", "Fecha_Carga", "Estado_Pedido", "Visible_App", "Nota"],
+        ["P1", "2026-06-30", "Cliente 1", "C1", "2026-07-01", "En proceso", "SI", ""],
+        ["P2", "2026-06-30", "Cliente 2", "C2", "2026-07-01", "En proceso", "SI", ""]
+    ]),
+    Detalle_Pedido_Cliente: new MockSheet([
+        ["ID_Pedido", "Area", "Producto", "Presentacion", "Unidad", "Cantidad_Pedida", "Cantidad_Completada", "Estado_Detalle", "Visible_App", "Nota"],
+        ["P1", "Empaque", "Nance", "Caja 10 lb", "cajas", 10, 5, "Parcial", "SI", ""],
+        ["P2", "Empaque", "Nance", "Caja 10 lb", "cajas", 10, 3, "Parcial", "SI", ""]
+    ]),
     Pedidos_Fruta: new MockSheet([
         ["ID", "Fecha", "Nombre_Pedido", "Proveedor_Iniciales", "Fruta", "Peso_Neto_Entrada_Lb", "Peso_Neto_Final_Lb", "Rendimiento_Peso", "Estado_Frutas", "Peso_Averia_Lb", "Peso_Desecho_Lb", "Nota_Final", "Estado_Empaque", "Visible_App", "Peso_Disponible_Empaque_Lb"],
         ["L1", "2026-06-30", "Lote Nance", "PR", "Nance", 100, 100, 1, "Finalizado", 0, 0, "", "Empacado Total", "SI", 0]
@@ -130,8 +153,45 @@ const sheets = {
 };
 
 const spreadsheet = new MockSpreadsheet(sheets);
+const properties = {};
+let uuidSequence = 0;
 const context = vm.createContext({
     console,
+    ContentService: {
+        MimeType: { JSON: "application/json" },
+        createTextOutput(text) {
+            return {
+                text,
+                setMimeType() { return this; }
+            };
+        }
+    },
+    LockService: {
+        getScriptLock() {
+            return {
+                waitLock() {},
+                releaseLock() {}
+            };
+        }
+    },
+    Utilities: {
+        getUuid() {
+            uuidSequence += 1;
+            return `uuid-${uuidSequence}`;
+        },
+        formatDate(value) { return String(value); }
+    },
+    Session: {
+        getScriptTimeZone() { return "America/Guatemala"; }
+    },
+    PropertiesService: {
+        getScriptProperties() {
+            return {
+                getProperty(key) { return properties[key] || null; },
+                setProperty(key, value) { properties[key] = value; }
+            };
+        }
+    },
     SpreadsheetApp: {
         getActiveSpreadsheet() {
             return spreadsheet;
@@ -142,6 +202,17 @@ const context = vm.createContext({
 const codePath = path.resolve(__dirname, "../apps-script/Code.gs");
 vm.runInContext(fs.readFileSync(codePath, "utf8"), context, { filename: "Code.gs" });
 
+vm.runInContext(
+    "asegurarEstructuraTecnica_(SpreadsheetApp.getActiveSpreadsheet(), true)",
+    context
+);
+
+assert.match(sheets.Clientes.valueAt(2, 4), /^uuid-/);
+assert.match(sheets.Pedidos_Cliente.valueAt(2, 9), /^uuid-/);
+assert.match(sheets.Detalle_Pedido_Cliente.valueAt(2, 11), /^uuid-/);
+assert.match(sheets.Pedidos_Fruta.valueAt(2, 16), /^uuid-/);
+assert.equal(sheets.Asignaciones_Pedido.getLastRow(), 3);
+
 const firstResult = vm.runInContext(
     'revertirAsignacionesPedidoCliente_(SpreadsheetApp.getActiveSpreadsheet(), "P1", "Pedido cancelado")',
     context
@@ -150,6 +221,8 @@ const firstResult = vm.runInContext(
 assert.equal(firstResult.length, 1);
 assert.equal(firstResult[0].pesoReincorporadoLb, 50);
 assert.equal(sheets.Empaque_Sesiones.valueAt(2, 18), "Revertida");
+assert.equal(sheets.Asignaciones_Pedido.valueAt(2, 10), "Revertida");
+assert.equal(sheets.Asignaciones_Pedido.valueAt(3, 10), "Activa");
 assert.equal(sheets.Pedidos_Fruta.valueAt(2, 15), 50);
 assert.equal(sheets.Pedidos_Fruta.valueAt(2, 13), "Empacado Parcial");
 assert.equal(sheets.Empaque_Salidas.valueAt(2, 5), 3);
@@ -162,5 +235,35 @@ const secondResult = vm.runInContext(
 
 assert.equal(secondResult.length, 0);
 assert.equal(sheets.Pedidos_Fruta.valueAt(2, 15), 50);
+
+const idLineaP2 = sheets.Detalle_Pedido_Cliente.valueAt(3, 11);
+const response = vm.runInContext(`doPost({
+    postData: {
+        contents: JSON.stringify({
+            action: "registroEmpaquePedido",
+            idPedidoCliente: "P2",
+            idLinea: "${idLineaP2}",
+            idLoteFruta: "L1",
+            cajas: 1,
+            presentacionLb: 10,
+            estadoUsoLote: "Empacado Parcial",
+            sobranteLoteLb: 40,
+            responsable: "OP",
+            nota: "Prueba UUID",
+            fecha: "2026-06-30"
+        })
+    }
+})`, context);
+const responseData = JSON.parse(response.text);
+
+assert.equal(responseData.status, "success");
+assert.equal(sheets.Detalle_Pedido_Cliente.valueAt(3, 7), 4);
+assert.equal(sheets.Pedidos_Fruta.valueAt(2, 15), 40);
+assert.equal(sheets.Empaque_Sesiones.getLastRow(), 4);
+assert.equal(sheets.Empaque_Sesiones.valueAt(4, 21), idLineaP2);
+assert.match(sheets.Empaque_Sesiones.valueAt(4, 22), /^uuid-/);
+assert.equal(sheets.Asignaciones_Pedido.getLastRow(), 4);
+assert.equal(sheets.Asignaciones_Pedido.valueAt(4, 4), idLineaP2);
+assert.equal(sheets.Asignaciones_Pedido.valueAt(4, 10), "Activa");
 
 console.log("Apps Script cancellation tests passed.");

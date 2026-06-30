@@ -270,10 +270,11 @@
             </div>
 
             <div id="p-admin-panel" class="hidden bg-slate-800 p-5 rounded-2xl border border-emerald-500/30 shadow-xl space-y-4">
-                <div class="bg-slate-900/60 p-2 rounded-xl flex gap-2 text-xs">
-                    <button id="p-mode-list-btn" onclick="setPedidosMode('lista')" class="flex-1 py-2 rounded-lg font-bold bg-emerald-600 text-white">Ver pedidos</button>
-                    <button id="p-mode-create-btn" onclick="setPedidosMode('crear')" class="flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Crear pedido</button>
-                    <button id="p-mode-clients-btn" onclick="setPedidosMode('clientes')" class="flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Clientes</button>
+                <div class="bg-slate-900/60 p-2 rounded-xl grid grid-cols-2 gap-2 text-xs">
+                    <button id="p-mode-list-btn" onclick="setPedidosMode('lista')" class="py-2 rounded-lg font-bold bg-emerald-600 text-white">Ver pedidos</button>
+                    <button id="p-mode-create-btn" onclick="setPedidosMode('crear')" class="py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Crear pedido</button>
+                    <button id="p-mode-clients-btn" onclick="setPedidosMode('clientes')" class="py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Clientes</button>
+                    <button id="p-mode-products-btn" onclick="setPedidosMode('productos')" class="py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Productos</button>
                 </div>
 
                 <div id="p-create-panel" class="hidden space-y-3">
@@ -295,19 +296,15 @@
 
                     <div class="border-t border-slate-700 pt-4 space-y-3">
                         <h3 class="text-xs font-black text-emerald-300 uppercase">Detalle del armado</h3>
-                        <div class="grid grid-cols-2 gap-3">
-                            <select id="p-linea-area" onchange="actualizarCampoProductoPedido()" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
-                                <option value="">-- Seleccionar área --</option>
-                                <option value="Empaque">Empaque</option>
-                            </select>
-                            <div>
-                                <input type="text" id="p-linea-producto" placeholder="Producto" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
-                                <select id="p-linea-fruta" class="hidden w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none"></select>
-                            </div>
-                            <input type="text" id="p-linea-presentacion" placeholder="Presentación: Caja 10 lb" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
-                            <input type="text" id="p-linea-unidad" placeholder="Unidad: cajas" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Producto del cliente:</label>
+                            <select id="p-linea-producto-cliente" onchange="actualizarInfoProductoPedido()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none"></select>
                         </div>
-                        <input type="number" id="p-linea-cantidad" placeholder="Cantidad pedida" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <div id="p-linea-producto-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-300"></div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cantidad de cajas:</label>
+                            <input type="number" id="p-linea-cantidad" min="1" step="1" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        </div>
                         <button onclick="agregarLineaPedido()" class="w-full bg-slate-700 text-white font-black py-3 rounded-xl text-xs uppercase">Agregar línea</button>
                         <div id="p-lineas-form" class="space-y-2 text-xs"></div>
                     </div>
@@ -323,6 +320,33 @@
                     </div>
                     <button onclick="agregarClientePedido()" class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Agregar cliente</button>
                     <div id="p-clientes-list" class="space-y-2 text-xs"></div>
+                </div>
+
+                <div id="p-products-panel" class="hidden space-y-5">
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-black text-emerald-300 uppercase">Producto general</h3>
+                        <input type="text" id="p-producto-base-nombre" placeholder="Nombre base: Tamal dulce" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="p-producto-presentacion" placeholder="Presentación: 12x15 oz." class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            <input type="text" id="p-producto-area" list="p-areas-options" placeholder="Área: Empaque" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        </div>
+                        <input type="text" id="p-producto-base-produccion" list="p-productos-base-options" placeholder="Producto base de producción: Nance" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <datalist id="p-areas-options">
+                            <option value="Empaque"></option>
+                        </datalist>
+                        <datalist id="p-productos-base-options"></datalist>
+                        <button onclick="agregarProductoGeneral()" class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Guardar producto general</button>
+                        <div id="p-productos-list" class="space-y-2 text-xs"></div>
+                    </div>
+
+                    <div class="border-t border-slate-700 pt-4 space-y-3">
+                        <h3 class="text-xs font-black text-cyan-300 uppercase">Nombre comercial por cliente</h3>
+                        <select id="p-producto-cliente-select" onchange="renderProductosClienteList()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                        <select id="p-producto-general-select" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                        <input type="text" id="p-producto-nombre-comercial" placeholder="Nombre mostrado para este cliente" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <button onclick="asignarProductoCliente()" class="w-full bg-cyan-600 text-white font-black py-3 rounded-xl text-xs uppercase">Asignar al cliente</button>
+                        <div id="p-productos-cliente-list" class="space-y-2 text-xs"></div>
+                    </div>
                 </div>
             </div>
 

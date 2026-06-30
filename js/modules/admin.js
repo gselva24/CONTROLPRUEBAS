@@ -45,7 +45,11 @@
                 method: "POST", 
                 headers: { "Content-Type": "text/plain;charset=utf-8" }, 
                 body: JSON.stringify({ action: "updateOptions", options: frutasCatalog }) 
-            }).then(() => { renderCatalog(); renderFrutasSelect(); });
+            }).then(() => {
+                renderCatalog();
+                renderFrutasSelect();
+                if (typeof renderProductosAdmin === "function") renderProductosAdmin();
+            });
         }
 
         function gerenteOcultarLoteApp(idPedido) {
