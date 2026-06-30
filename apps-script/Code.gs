@@ -178,7 +178,10 @@ function doGet(e) {
         estadoUsoLote: sesionesData[se][13],
         sobranteLoteLb: numeroSeguro_(sesionesData[se][14]),
         responsable: sesionesData[se][15] || "",
-        nota: sesionesData[se][16] || ""
+        nota: sesionesData[se][16] || "",
+        estadoRegistro: sesionesData[se][17] || "Activa",
+        fechaReversion: sesionesData[se][18] || "",
+        motivoReversion: sesionesData[se][19] || ""
       });
     }
   }
@@ -335,11 +338,13 @@ function doPost(e) {
     }
 
     if (params.action === "cancelarPedidoCliente") {
+      var lotesLiberadosCancelacion = revertirAsignacionesPedidoCliente_(ss, params.idPedido, "Pedido cancelado");
       actualizarEstadoPedidoCliente_(ss, params.idPedido, "Cancelado");
-      return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({status: "success", lotesLiberados: lotesLiberadosCancelacion})).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (params.action === "eliminarPedidoCliente") {
+      revertirAsignacionesPedidoCliente_(ss, params.idPedido, "Pedido eliminado");
       eliminarPedidoCliente_(ss, params.idPedido);
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
@@ -436,7 +441,7 @@ function doPost(e) {
     }
     // -- OPERATIVO: REGISTRO DE EMPAQUE --
     if (params.action === "registroEmpaquePedido") {
-      var sheetEmpaqueSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota"]);
+      var sheetEmpaqueSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion"]);
       var sheetDetallePedido = ss.getSheetByName("Detalle_Pedido_Cliente");
       var sheetPedidoCliente = ss.getSheetByName("Pedidos_Cliente");
       var sheetFrutaEmpaque = ss.getSheetByName("Pedidos_Fruta");
@@ -527,7 +532,10 @@ function doPost(e) {
         estadoUsoLote,
         estadoUsoLote === "Empacado Total" ? 0 : sobranteLote,
         params.responsable || "",
-        params.nota || ""
+        params.nota || "",
+        "Activa",
+        "",
+        ""
       ]);
 
       var dataEmpaqueNueva = sheetEmpaqueSalidas.getDataRange().getValues();
@@ -863,9 +871,118 @@ function actualizarEstadoPedidoCliente_(ss, idPedido, estado) {
   if (estado === "Cancelado" && sheetDetalle) {
     var dataDetalle = sheetDetalle.getDataRange().getValues();
     for (var d = 1; d < dataDetalle.length; d++) {
-      if (dataDetalle[d][0] == idPedido) sheetDetalle.getRange(d + 1, 8).setValue("Cancelado");
+      if (dataDetalle[d][0] == idPedido) {
+        sheetDetalle.getRange(d + 1, 7).setValue(0);
+        sheetDetalle.getRange(d + 1, 8).setValue("Cancelado");
+      }
     }
   }
+}
+
+function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
+  if (!idPedido) return [];
+  var sheetSesiones = ss.getSheetByName("Empaque_Sesiones");
+  if (!sheetSesiones) return [];
+  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion"]);
+
+  var dataSesiones = sheetSesiones.getDataRange().getValues();
+  var lotesAReincorporar = {};
+  var ahora = new Date();
+  for (var i = 1; i < dataSesiones.length; i++) {
+    if (dataSesiones[i][2] != idPedido) continue;
+    if (normalizarTexto_(dataSesiones[i][17] || "Activa") === "revertida") continue;
+
+    var idLote = dataSesiones[i][11];
+    var pesoAsignado = numeroEnteroSeguro_(dataSesiones[i][9]) * numeroSeguro_(dataSesiones[i][10]);
+    if (idLote) {
+      lotesAReincorporar[idLote] = numeroSeguro_(lotesAReincorporar[idLote]) + pesoAsignado;
+    }
+
+    sheetSesiones.getRange(i + 1, 18, 1, 3).setValues([[
+      "Revertida",
+      ahora,
+      (motivo || "Pedido cancelado") + ": " + idPedido
+    ]]);
+  }
+
+  var lotesLiberados = [];
+  Object.keys(lotesAReincorporar).forEach(function(idLote) {
+    reincorporarLoteEmpaque_(ss, idLote, lotesAReincorporar[idLote]);
+    lotesLiberados.push({
+      idLote: idLote,
+      pesoReincorporadoLb: lotesAReincorporar[idLote]
+    });
+  });
+  return lotesLiberados;
+}
+
+function reincorporarLoteEmpaque_(ss, idLote, pesoReincorporado) {
+  var sheetFrutas = ss.getSheetByName("Pedidos_Fruta");
+  if (!sheetFrutas) return;
+  var filaLote = buscarFilaPorId_(sheetFrutas, idLote);
+  if (filaLote === -1) return;
+
+  var pesoFinal = numeroSeguro_(sheetFrutas.getRange(filaLote, 7).getValue());
+  var disponibleGuardado = sheetFrutas.getRange(filaLote, 15).getValue();
+  var disponibleActual = disponibleGuardado !== "" && typeof disponibleGuardado !== "undefined"
+    ? numeroSeguro_(disponibleGuardado)
+    : pesoFinal;
+  var nuevoDisponible = disponibleActual + numeroSeguro_(pesoReincorporado);
+  if (pesoFinal > 0) nuevoDisponible = Math.min(pesoFinal, nuevoDisponible);
+
+  var resumenActivo = resumenSesionesActivasLote_(ss, idLote);
+  var nuevoEstado = "Pendiente";
+  if (resumenActivo.totalCajas > 0 && nuevoDisponible > 0) nuevoEstado = "Empacado Parcial";
+  if (resumenActivo.totalCajas > 0 && nuevoDisponible <= 0) nuevoEstado = "Empacado Total";
+
+  sheetFrutas.getRange(filaLote, 13).setValue(nuevoEstado);
+  sheetFrutas.getRange(filaLote, 15).setValue(nuevoDisponible);
+  sincronizarEmpaqueSalidaLote_(ss, idLote, resumenActivo, nuevoEstado);
+  calcularMateriaPrima(idLote);
+}
+
+function resumenSesionesActivasLote_(ss, idLote) {
+  var resumen = { totalCajas: 0, ultimoPedido: "", fruta: "", ultimaFecha: "" };
+  var sheetSesiones = ss.getSheetByName("Empaque_Sesiones");
+  if (!sheetSesiones) return resumen;
+  var data = sheetSesiones.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][11] != idLote) continue;
+    if (normalizarTexto_(data[i][17] || "Activa") === "revertida") continue;
+    resumen.totalCajas += numeroEnteroSeguro_(data[i][9]);
+    resumen.ultimoPedido = data[i][2] || resumen.ultimoPedido;
+    resumen.fruta = data[i][12] || resumen.fruta;
+    resumen.ultimaFecha = data[i][1] || resumen.ultimaFecha;
+  }
+  return resumen;
+}
+
+function sincronizarEmpaqueSalidaLote_(ss, idLote, resumen, estadoEmpaque) {
+  var sheetSalidas = getOrCreateSheet_(ss, "Empaque_Salidas", ["ID", "Nombre_Pedido", "Fruta", "Fecha_Empaque", "Cajas", "Estado_Empaque"]);
+  var data = sheetSalidas.getDataRange().getValues();
+  var filaSalida = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == idLote) {
+      filaSalida = i + 1;
+      break;
+    }
+  }
+
+  if (resumen.totalCajas <= 0) {
+    if (filaSalida !== -1) sheetSalidas.deleteRow(filaSalida);
+    return;
+  }
+
+  var valores = [[
+    idLote,
+    resumen.ultimoPedido,
+    resumen.fruta,
+    resumen.ultimaFecha,
+    resumen.totalCajas,
+    estadoEmpaque
+  ]];
+  if (filaSalida === -1) sheetSalidas.appendRow(valores[0]);
+  else sheetSalidas.getRange(filaSalida, 1, 1, 6).setValues(valores);
 }
 
 function eliminarPedidoCliente_(ss, idPedido) {

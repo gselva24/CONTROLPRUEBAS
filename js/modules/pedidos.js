@@ -221,7 +221,12 @@ function postPedidos(payload, successMessage) {
         if (resData && resData.status === "error") {
             alert("Error: " + resData.message);
         } else {
-            alert(successMessage);
+            let mensaje = successMessage;
+            if (payload.action === "cancelarPedidoCliente" && Array.isArray(resData.lotesLiberados)) {
+                const pesoLiberado = resData.lotesLiberados.reduce((total, lote) => total + Number(lote.pesoReincorporadoLb || 0), 0);
+                mensaje += ` Se liberaron ${resData.lotesLiberados.length} lote(s) y ${pesoLiberado.toLocaleString('es-GT', { maximumFractionDigits: 2 })} lb.`;
+            }
+            alert(mensaje);
             resetPedidoForm();
             setPedidosMode('lista');
             fetchDataFromCloud();
@@ -357,7 +362,7 @@ function ocultarPedidoCliente(idPedido) {
 
 function cancelarPedidoCliente(idPedido) {
     if (!isAdmin) { alert("Active modo gerente."); return; }
-    if (!confirm("¿Cancelar este pedido?")) return;
+    if (!confirm("¿Cancelar este pedido y liberar sus asignaciones activas?")) return;
     postPedidos({ action: "cancelarPedidoCliente", idPedido: idPedido }, "Pedido cancelado.");
 }
 

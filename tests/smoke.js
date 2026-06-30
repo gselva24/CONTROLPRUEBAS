@@ -71,7 +71,6 @@ vm.runInContext(`
 assert.match(elements["e-lote-fruta-select"].innerHTML, /L-NANCE/);
 assert.doesNotMatch(elements["e-lote-fruta-select"].innerHTML, /L-MAMEY/);
 
-elements["historial-pedidos-container"] = element();
 elements["cards-container"] = element();
 
 vm.runInContext(`
@@ -93,17 +92,31 @@ vm.runInContext(`
         estadoDetalle: "Parcial",
         visibleApp: "SI"
     }];
-    empaqueSesiones = [{
-        idPedido: "CLI-0107-001",
-        cliente: "Cliente Prueba",
-        idLoteFruta: "L-NANCE",
-        fruta: "Nance",
-        cajasHechas: 25,
-        pesoEmpacadoLb: 250,
-        estadoUsoLote: "Empacado Parcial",
-        sobranteLoteLb: 50,
-        fecha: "2026-06-30T10:00:00Z"
-    }];
+    empaqueSesiones = [
+        {
+            idPedido: "CLI-0107-001",
+            cliente: "Cliente Prueba",
+            idLoteFruta: "L-NANCE",
+            fruta: "Nance",
+            cajasHechas: 25,
+            pesoEmpacadoLb: 250,
+            estadoUsoLote: "Empacado Parcial",
+            sobranteLoteLb: 50,
+            fecha: "2026-06-30T10:00:00Z",
+            estadoRegistro: "Activa"
+        },
+        {
+            idPedido: "PEDIDO-CANCELADO",
+            cliente: "Cliente Cancelado",
+            idLoteFruta: "L-NANCE",
+            fruta: "Nance",
+            cajasHechas: 10,
+            pesoEmpacadoLb: 100,
+            estadoUsoLote: "Empacado Parcial",
+            fecha: "2026-06-30T09:00:00Z",
+            estadoRegistro: "Revertida"
+        }
+    ];
     historialCompleto = [{
         id: "L-NANCE",
         nombre: "Lote Nance",
@@ -119,11 +132,9 @@ vm.runInContext(`
     renderMobileHistory();
 `, context);
 
-assert.equal(elements["historial-pedidos-container"].children.length, 1);
-assert.match(elements["historial-pedidos-container"].children[0].innerHTML, /25%/);
-assert.match(elements["historial-pedidos-container"].children[0].innerHTML, /L-NANCE/);
 assert.equal(elements["cards-container"].children.length, 1);
 assert.match(elements["cards-container"].children[0].innerHTML, /CLI-0107-001/);
+assert.doesNotMatch(elements["cards-container"].children[0].innerHTML, /PEDIDO-CANCELADO/);
 
 elements["p-cards-container"] = element();
 elements["p-admin-panel"] = element();

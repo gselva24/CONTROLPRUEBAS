@@ -150,9 +150,18 @@ La aplicacion usa estas filas para mostrar en Historial el avance del pedido y t
 | O | Sobrante_Lote_Lb |
 | P | Responsable |
 | Q | Nota |
+| R | Estado_Registro |
+| S | Fecha_Reversion |
+| T | Motivo_Reversion |
 
 Para una linea del area `Empaque`, `Producto_Detalle` debe coincidir con una fruta del catalogo `Opciones`.
 Al registrar una sesion, Apps Script tambien verifica que esa fruta sea la misma del lote seleccionado en `Pedidos_Fruta`.
+
+`Estado_Registro` usa `Activa` o `Revertida`. Cuando se cancela o elimina un pedido, sus sesiones activas se marcan como revertidas, se registra la fecha y el motivo, y el peso asignado se reincorpora al lote sin borrar la trazabilidad original.
+
+El peso reincorporado se calcula como `Cajas_Hechas * Presentacion_Lb` y nunca puede superar `Peso_Neto_Final_Lb` del lote. Despues se recalculan `Estado_Empaque`, `Peso_Disponible_Empaque_Lb`, `Empaque_Salidas` y `Control_Materia_Prima`.
+
+Los modulos futuros que asignen otros productos a pedidos deben guardar un registro de asignacion con estado activo/revertido y agregar su adaptador de reincorporacion dentro de `revertirAsignacionesPedidoCliente_`. Actualmente el flujo operativo conectado es Empaque con lotes de `Pedidos_Fruta`.
 
 ## Inventario_Bodega
 

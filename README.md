@@ -33,8 +33,11 @@ La version actual separa HTML, CSS, JavaScript base y modulos por area sin cambi
 
 Las lineas de pedido del area Empaque usan el mismo catalogo de frutas que el modulo Frutas. El frontend filtra los lotes disponibles y Apps Script rechaza cualquier intento de registrar una fruta diferente.
 
+Al cancelar o eliminar un pedido, Apps Script revierte sus sesiones activas de empaque y reincorpora el peso asignado a los lotes de fruta. Las sesiones se conservan como registros revertidos para auditoria.
+
 Prueba rapida de la relacion pedido/fruta/lote e Historial:
 
 ```powershell
 node tests/smoke.js
+node tests/apps-script-cancel.test.js
 ```
