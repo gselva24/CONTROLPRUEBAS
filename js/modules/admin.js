@@ -2,18 +2,17 @@
             if (isAdmin) {
                 isAdmin = false;
                 document.getElementById('g-box-catalogo').classList.add('hidden');
-                document.getElementById('g-box-gestion-ordenes').classList.add('hidden');
                 document.getElementById('chrono-display').classList.add('hidden'); 
                 document.getElementById('admin-toggle-btn').innerText = "🔑 Gerente";
                 document.getElementById('admin-toggle-btn').classList.replace('bg-rose-600', 'bg-slate-700');
                 if (typeof actualizarVistaPedidosGerente === "function") actualizarVistaPedidosGerente();
                 if (typeof renderPedidosCards === "function") renderPedidosCards();
+                if (typeof renderMobileHistory === "function") renderMobileHistory();
             } else {
                 let pass = prompt("Ingrese contraseña de Gerente:");
                 if (pass === GERENTE_PASSWORD) {
                     isAdmin = true;
                     document.getElementById('g-box-catalogo').classList.remove('hidden');
-                    document.getElementById('g-box-gestion-ordenes').classList.remove('hidden');
                     
                     if (timerInterval && startTime) {
                         document.getElementById('chrono-display').classList.remove('hidden');
@@ -24,6 +23,7 @@
                     renderCatalog();
                     if (typeof actualizarVistaPedidosGerente === "function") actualizarVistaPedidosGerente();
                     if (typeof renderPedidosCards === "function") renderPedidosCards();
+                    if (typeof renderMobileHistory === "function") renderMobileHistory();
                 } else { alert("Contraseña incorrecta."); }
             }
         }
@@ -48,27 +48,26 @@
             }).then(() => { renderCatalog(); renderFrutasSelect(); });
         }
 
-        function renderGerenteLoteSelect() { 
-            const sel = document.getElementById('g-lote-select'); sel.innerHTML = '<option value=""></option>'; 
-            historialCompleto.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.id} - ${p.nombre}</option>`); 
-        }
-
-        function gerenteOcultarLoteApp() { 
+        function gerenteOcultarLoteApp(idPedido) {
+            if (!isAdmin) { alert("Active modo gerente."); return; }
+            if (!idPedido) return;
             if(confirm("¿Ocultar este lote de la App? (Seguirá en el Excel)")) {
                 fetch(GOOGLE_SHEETS_URL, {
                     method:"POST", 
                     headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                    body:JSON.stringify({action:"ocultarLoteManual", idPedido:document.getElementById('g-lote-select').value})
+                    body:JSON.stringify({action:"ocultarLoteManual", idPedido:idPedido})
                 }).then(()=>fetchDataFromCloud()); 
             }
         }
 
-        function gerenteBorrarLoteTotal() { 
+        function gerenteBorrarLoteTotal(idPedido) {
+            if (!isAdmin) { alert("Active modo gerente."); return; }
+            if (!idPedido) return;
             if(confirm("¡Peligro! ¿Borrar este lote de todas las pestañas de la base de datos?")) {
                 fetch(GOOGLE_SHEETS_URL, {
                     method:"POST", 
                     headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                    body:JSON.stringify({action:"deleteLote", idPedido:document.getElementById('g-lote-select').value})
+                    body:JSON.stringify({action:"deleteLote", idPedido:idPedido})
                 }).then(()=>fetchDataFromCloud()); 
             }
         }

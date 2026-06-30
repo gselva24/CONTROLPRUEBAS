@@ -25,7 +25,6 @@
                 renderPedidosCards();
                 renderClientesList();
                 renderMobileHistory(); 
-                renderGerenteLoteSelect();
                 
                 const historialSinMetricas = historialCompleto.some(p => typeof p.pesoProcesado === "undefined" || typeof p.cajasProcesadas === "undefined");
                 if (historialSinMetricas) {

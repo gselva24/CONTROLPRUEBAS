@@ -99,6 +99,10 @@ function renderMobileHistory() {
             <div class="space-y-2">
                 <h4 class="text-[9px] font-black uppercase text-slate-400">Uso del lote</h4>
                 ${asignacionesHtml}
+            </div>
+            <div class="${isAdmin ? 'grid' : 'hidden'} grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="gerenteOcultarLoteApp('${p.id}')" class="bg-slate-700 text-white text-[10px] font-bold py-2.5 rounded-lg">Ocultar</button>
+                <button type="button" onclick="gerenteBorrarLoteTotal('${p.id}')" class="bg-rose-600 text-white text-[10px] font-black py-2.5 rounded-lg">Eliminar</button>
             </div>`;
         container.appendChild(card);
     });

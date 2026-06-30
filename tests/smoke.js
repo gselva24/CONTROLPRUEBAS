@@ -135,6 +135,12 @@ vm.runInContext(`
 assert.equal(elements["cards-container"].children.length, 1);
 assert.match(elements["cards-container"].children[0].innerHTML, /CLI-0107-001/);
 assert.doesNotMatch(elements["cards-container"].children[0].innerHTML, /PEDIDO-CANCELADO/);
+assert.match(elements["cards-container"].children[0].innerHTML, /class="hidden grid-cols-2/);
+
+vm.runInContext("isAdmin = true; renderMobileHistory();", context);
+assert.match(elements["cards-container"].children[0].innerHTML, /class="grid grid-cols-2/);
+assert.match(elements["cards-container"].children[0].innerHTML, /gerenteOcultarLoteApp\('L-NANCE'\)/);
+assert.match(elements["cards-container"].children[0].innerHTML, /gerenteBorrarLoteTotal\('L-NANCE'\)/);
 
 elements["p-cards-container"] = element();
 elements["p-admin-panel"] = element();
