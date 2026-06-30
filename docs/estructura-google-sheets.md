@@ -129,6 +129,7 @@ Estados principales de `Estado_Empaque`:
 ## Empaque_Sesiones
 
 Registro detallado de cada sesion de empaque vinculada a un pedido de cliente y a un lote de fruta.
+La aplicacion usa estas filas para mostrar en Historial el avance del pedido y todos los pedidos en los que participo cada lote.
 
 | Columna | Nombre |
 | --- | --- |
@@ -149,6 +150,9 @@ Registro detallado de cada sesion de empaque vinculada a un pedido de cliente y 
 | O | Sobrante_Lote_Lb |
 | P | Responsable |
 | Q | Nota |
+
+Para una linea del area `Empaque`, `Producto_Detalle` debe coincidir con una fruta del catalogo `Opciones`.
+Al registrar una sesion, Apps Script tambien verifica que esa fruta sea la misma del lote seleccionado en `Pedidos_Fruta`.
 
 ## Inventario_Bodega
 

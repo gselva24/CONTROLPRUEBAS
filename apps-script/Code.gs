@@ -1,7 +1,7 @@
 ﻿//Script Google sheets API conexión con aplicación
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], pedidosCliente: [], detallePedidosCliente: [] };
+  var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], pedidosCliente: [], detallePedidosCliente: [], empaqueSesiones: [] };
 
   // 1. Cargar Opciones del Catálogo
   var sheetOpciones = ss.getSheetByName("Opciones");
@@ -154,6 +154,35 @@ function doGet(e) {
     }
   }
 
+  var sheetEmpaqueSesiones = ss.getSheetByName("Empaque_Sesiones");
+  if (sheetEmpaqueSesiones) {
+    var sesionesData = sheetEmpaqueSesiones.getDataRange().getValues();
+    for (var se = 1; se < sesionesData.length; se++) {
+      var cajasSesion = numeroEnteroSeguro_(sesionesData[se][9]);
+      var presentacionSesion = numeroSeguro_(sesionesData[se][10]);
+      data.empaqueSesiones.push({
+        idSesion: sesionesData[se][0],
+        fecha: sesionesData[se][1],
+        idPedido: sesionesData[se][2],
+        cliente: sesionesData[se][3],
+        codigoCliente: sesionesData[se][4],
+        area: sesionesData[se][5],
+        producto: sesionesData[se][6],
+        presentacion: sesionesData[se][7],
+        unidad: sesionesData[se][8],
+        cajasHechas: cajasSesion,
+        presentacionLb: presentacionSesion,
+        pesoEmpacadoLb: cajasSesion * presentacionSesion,
+        idLoteFruta: sesionesData[se][11],
+        fruta: sesionesData[se][12],
+        estadoUsoLote: sesionesData[se][13],
+        sobranteLoteLb: numeroSeguro_(sesionesData[se][14]),
+        responsable: sesionesData[se][15] || "",
+        nota: sesionesData[se][16] || ""
+      });
+    }
+  }
+
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -263,6 +292,17 @@ function doPost(e) {
       if (!codigoPedido || !clientePedido) return json_(false, "Seleccione cliente.");
       if (!fechaCargaPedido) return json_(false, "Seleccione fecha de carga.");
       if (!lineasPedido.length) return json_(false, "Agregue al menos una linea al armado.");
+
+      for (var lp = 0; lp < lineasPedido.length; lp++) {
+        var lineaValidar = lineasPedido[lp];
+        var cantidadValidar = numeroSeguro_(lineaValidar.cantidadPedida);
+        if (!lineaValidar.area || !lineaValidar.producto || !lineaValidar.unidad || cantidadValidar <= 0) {
+          return json_(false, "Hay una linea incompleta en el armado.");
+        }
+        if (normalizarTexto_(lineaValidar.area) === "empaque" && !frutaExisteEnCatalogo_(ss, lineaValidar.producto)) {
+          return json_(false, "La fruta de una linea de Empaque no existe en el catalogo Opciones.");
+        }
+      }
 
       var idPedidoCliente = crearIdPedidoCliente_(ss, codigoPedido, fechaCargaPedido);
       var ahoraPedido = new Date();
@@ -415,15 +455,49 @@ function doPost(e) {
       var filaDetallePedido = buscarFilaDetallePedido_(sheetDetallePedido, params.idPedidoCliente, params.areaDetalle, params.productoDetalle, params.presentacionDetalle, params.unidadDetalle);
       if (filaDetallePedido === -1) return json_(false, "No se encontro la linea del armado.");
 
+      var filaPedidoCliente = buscarFilaPorId_(sheetPedidoCliente, params.idPedidoCliente);
+      if (filaPedidoCliente === -1) return json_(false, "No se encontro el pedido de cliente.");
+      var estadoPedidoGuardado = sheetPedidoCliente.getRange(filaPedidoCliente, 6).getValue();
+      var visiblePedidoGuardado = sheetPedidoCliente.getRange(filaPedidoCliente, 7).getValue();
+      if (normalizarTexto_(estadoPedidoGuardado) === "cancelado" || normalizarTexto_(estadoPedidoGuardado) === "completado" || normalizarTexto_(visiblePedidoGuardado) === "no") {
+        return json_(false, "El pedido seleccionado ya no acepta registros.");
+      }
+
       var filaLoteEmpaque = buscarFilaPorId_(sheetFrutaEmpaque, params.idLoteFruta);
       if (filaLoteEmpaque === -1) return json_(false, "No se encontro el lote de fruta.");
 
-      var disponibleActual = numeroSeguro_(sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).getValue());
-      if (!disponibleActual) disponibleActual = numeroSeguro_(sheetFrutaEmpaque.getRange(filaLoteEmpaque, 7).getValue());
+      var estadoDetalleGuardado = sheetDetallePedido.getRange(filaDetallePedido, 8).getValue();
+      var visibleDetalleGuardado = sheetDetallePedido.getRange(filaDetallePedido, 9).getValue();
+      if (normalizarTexto_(estadoDetalleGuardado) === "completado" || normalizarTexto_(estadoDetalleGuardado) === "cancelado" || normalizarTexto_(visibleDetalleGuardado) === "no") {
+        return json_(false, "La linea seleccionada ya no acepta registros.");
+      }
+
+      var productoDetalleGuardado = sheetDetallePedido.getRange(filaDetallePedido, 3).getValue();
+      var frutaLoteGuardada = sheetFrutaEmpaque.getRange(filaLoteEmpaque, 5).getValue();
+      if (normalizarTexto_(productoDetalleGuardado) !== normalizarTexto_(frutaLoteGuardada)) {
+        return json_(false, "La fruta del lote no coincide con la fruta solicitada en el pedido.");
+      }
+
+      var estadoFrutaEmpaque = sheetFrutaEmpaque.getRange(filaLoteEmpaque, 9).getValue();
+      var estadoActualEmpaque = sheetFrutaEmpaque.getRange(filaLoteEmpaque, 13).getValue();
+      var visibleLoteEmpaque = sheetFrutaEmpaque.getRange(filaLoteEmpaque, 14).getValue();
+      if (normalizarTexto_(estadoFrutaEmpaque) !== "finalizado" || normalizarTexto_(estadoActualEmpaque) === "empacado total" || normalizarTexto_(visibleLoteEmpaque) === "no") {
+        return json_(false, "El lote seleccionado ya no esta disponible para empaque.");
+      }
+
+      var disponibleGuardado = sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).getValue();
+      var disponibleActual = disponibleGuardado !== "" && typeof disponibleGuardado !== "undefined"
+        ? numeroSeguro_(disponibleGuardado)
+        : numeroSeguro_(sheetFrutaEmpaque.getRange(filaLoteEmpaque, 7).getValue());
+      if (disponibleActual <= 0) return json_(false, "El lote seleccionado no tiene peso disponible.");
       if (params.estadoUsoLote === "Empacado Parcial" && sobranteLote >= disponibleActual) return json_(false, "El sobrante debe ser menor al disponible actual.");
 
       var cantidadPedidaDetalle = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 6).getValue());
-      var cantidadCompletadaDetalle = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 7).getValue()) + cajasHechas;
+      var cantidadCompletadaAnterior = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 7).getValue());
+      if (cajasHechas > cantidadPedidaDetalle - cantidadCompletadaAnterior) {
+        return json_(false, "Las cajas ingresadas exceden la cantidad pendiente de la linea.");
+      }
+      var cantidadCompletadaDetalle = cantidadCompletadaAnterior + cajasHechas;
       var estadoDetalle = "Parcial";
       if (cantidadCompletadaDetalle <= 0) estadoDetalle = "Pendiente";
       if (cantidadCompletadaDetalle >= cantidadPedidaDetalle) estadoDetalle = "Completado";
@@ -440,16 +514,16 @@ function doPost(e) {
         idSesionEmpaque,
         fechaEmpaque,
         params.idPedidoCliente,
-        params.cliente || "",
-        params.codigoCliente || "",
-        params.areaDetalle || "",
-        params.productoDetalle || "",
-        params.presentacionDetalle || "",
-        params.unidadDetalle || "",
+        sheetPedidoCliente.getRange(filaPedidoCliente, 3).getValue() || "",
+        sheetPedidoCliente.getRange(filaPedidoCliente, 4).getValue() || "",
+        sheetDetallePedido.getRange(filaDetallePedido, 2).getValue() || "",
+        productoDetalleGuardado,
+        sheetDetallePedido.getRange(filaDetallePedido, 4).getValue() || "",
+        sheetDetallePedido.getRange(filaDetallePedido, 5).getValue() || "",
         cajasHechas,
         presentacionLb,
         params.idLoteFruta,
-        params.fruta || "",
+        frutaLoteGuardada,
         estadoUsoLote,
         estadoUsoLote === "Empacado Total" ? 0 : sobranteLote,
         params.responsable || "",
@@ -465,7 +539,7 @@ function doPost(e) {
         }
       }
       if (filaEmpaqueSalida === -1) {
-        sheetEmpaqueSalidas.appendRow([params.idLoteFruta, params.idPedidoCliente, params.fruta || "", fechaEmpaque, cajasHechas, estadoUsoLote]);
+        sheetEmpaqueSalidas.appendRow([params.idLoteFruta, params.idPedidoCliente, frutaLoteGuardada, fechaEmpaque, cajasHechas, estadoUsoLote]);
       } else {
         var cajasPrevias = numeroEnteroSeguro_(sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 5).getValue());
         sheetEmpaqueSalidas.getRange(filaEmpaqueSalida, 2).setValue(params.idPedidoCliente);
@@ -820,6 +894,17 @@ function buscarFilaDetallePedido_(sheetDetalle, idPedido, area, producto, presen
     }
   }
   return -1;
+}
+
+function frutaExisteEnCatalogo_(ss, fruta) {
+  var sheetOpciones = ss.getSheetByName("Opciones");
+  if (!sheetOpciones) return false;
+  var data = sheetOpciones.getDataRange().getValues();
+  var frutaNormalizada = normalizarTexto_(fruta);
+  for (var i = 1; i < data.length; i++) {
+    if (normalizarTexto_(data[i][0]) === frutaNormalizada) return true;
+  }
+  return false;
 }
 
 function recalcularEstadoPedidoCliente_(ss, idPedido) {

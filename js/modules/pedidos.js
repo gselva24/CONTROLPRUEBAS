@@ -1,4 +1,23 @@
 let pedidoLineasForm = [];
+let pedidoDetalleExpandido = "";
+
+function formatearFechaCargaPedido(valor) {
+    if (!valor) return "Sin fecha";
+    const texto = String(valor);
+    const fechaSimple = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (fechaSimple) return `${fechaSimple[3]}-${fechaSimple[2]}-${fechaSimple[1]}`;
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return texto;
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    return `${dia}-${mes}-${fecha.getFullYear()}`;
+}
+
+function toggleDetallePedido(idPedido) {
+    pedidoDetalleExpandido = pedidoDetalleExpandido === idPedido ? "" : idPedido;
+    renderPedidosCards();
+}
 
 function actualizarVistaPedidosGerente() {
     const adminPanel = document.getElementById('p-admin-panel');
@@ -51,6 +70,34 @@ function actualizarInfoClientePedido() {
     info.classList.remove('hidden');
 }
 
+function actualizarCampoProductoPedido() {
+    const areaInput = document.getElementById('p-linea-area');
+    const productoInput = document.getElementById('p-linea-producto');
+    const frutaSelect = document.getElementById('p-linea-fruta');
+    if (!areaInput || !productoInput || !frutaSelect) return;
+
+    const esEmpaque = normalizarTextoFront(areaInput.value) === "empaque";
+    productoInput.classList.toggle('hidden', esEmpaque);
+    frutaSelect.classList.toggle('hidden', !esEmpaque);
+
+    if (esEmpaque) {
+        const valorActual = frutaSelect.value;
+        frutaSelect.innerHTML = '<option value="">-- Seleccionar fruta del catálogo --</option>';
+        frutasCatalog.forEach(fruta => {
+            frutaSelect.innerHTML += `<option value="${fruta}">${fruta}</option>`;
+        });
+        if (frutasCatalog.includes(valorActual)) frutaSelect.value = valorActual;
+    }
+}
+
+function obtenerProductoLineaPedido() {
+    const area = document.getElementById('p-linea-area').value;
+    if (normalizarTextoFront(area) === "empaque") {
+        return document.getElementById('p-linea-fruta').value.trim();
+    }
+    return document.getElementById('p-linea-producto').value.trim();
+}
+
 function renderClientesList() {
     const list = document.getElementById('p-clientes-list');
     if (!list) return;
@@ -91,7 +138,7 @@ function ocultarClientePedido(codigo) {
 
 function agregarLineaPedido() {
     const area = document.getElementById('p-linea-area').value.trim();
-    const producto = document.getElementById('p-linea-producto').value.trim();
+    const producto = obtenerProductoLineaPedido();
     const presentacion = document.getElementById('p-linea-presentacion').value.trim();
     const unidad = document.getElementById('p-linea-unidad').value.trim();
     const cantidad = Number(document.getElementById('p-linea-cantidad').value);
@@ -104,9 +151,11 @@ function agregarLineaPedido() {
     pedidoLineasForm.push({ area, producto, presentacion, unidad, cantidadPedida: cantidad, nota: "" });
     document.getElementById('p-linea-area').value = "";
     document.getElementById('p-linea-producto').value = "";
+    document.getElementById('p-linea-fruta').value = "";
     document.getElementById('p-linea-presentacion').value = "";
     document.getElementById('p-linea-unidad').value = "";
     document.getElementById('p-linea-cantidad').value = "";
+    actualizarCampoProductoPedido();
     renderPedidoLineasForm();
 }
 
@@ -186,10 +235,13 @@ function detallesDePedido(idPedido) {
 }
 
 function calcularProgresoPedido(detalles) {
-    const totalPedido = detalles.reduce((acc, d) => acc + Number(d.cantidadPedida || 0), 0);
-    const totalCompletado = detalles.reduce((acc, d) => acc + Number(d.cantidadCompletada || 0), 0);
-    const porcentaje = totalPedido > 0 ? Math.min(100, Math.round((totalCompletado / totalPedido) * 100)) : 0;
-    return { totalPedido, totalCompletado, porcentaje };
+    if (!detalles.length) return { porcentaje: 0 };
+    const sumaPorcentajes = detalles.reduce((acc, d) => {
+        const pedida = Number(d.cantidadPedida || 0);
+        const completada = Number(d.cantidadCompletada || 0);
+        return acc + (pedida > 0 ? Math.min(100, (completada / pedida) * 100) : 0);
+    }, 0);
+    return { porcentaje: Math.round(sumaPorcentajes / detalles.length) };
 }
 
 function estilosEstadoPedido(estado) {
@@ -225,6 +277,7 @@ function renderPedidosCards() {
         const detalles = detallesDePedido(pedido.idPedido);
         const progreso = calcularProgresoPedido(detalles);
         const estilo = estilosEstadoPedido(pedido.estadoPedido);
+        const estaExpandido = pedidoDetalleExpandido === pedido.idPedido;
         const lineasHtml = detalles.map(d => {
             const pedida = Number(d.cantidadPedida || 0);
             const completada = Number(d.cantidadCompletada || 0);
@@ -254,32 +307,45 @@ function renderPedidosCards() {
         }).join("");
 
         container.innerHTML += `
-            <div class="bg-slate-800 p-4 rounded-xl border ${estilo.border} shadow-xl text-xs space-y-3">
-                <div class="flex justify-between gap-3 border-b border-slate-700 pb-2">
-                    <span class="font-mono bg-slate-900 px-2 py-0.5 rounded text-emerald-300 font-bold tracking-wider">${pedido.idPedido}</span>
-                    <span class="font-black ${estilo.text} uppercase">${pedido.estadoPedido}</span>
-                </div>
-                <div>
-                    <h4 class="text-sm font-black text-slate-100">${pedido.cliente}</h4>
-                    <p class="text-[10px] text-slate-400 mt-0.5">Código: ${pedido.codigoCliente} · Carga: ${pedido.fechaCarga}</p>
-                    ${pedido.nota ? `<p class="text-[10px] text-slate-500 mt-1">${pedido.nota}</p>` : ""}
-                </div>
-                <div class="${estilo.bg} border ${estilo.border} rounded-xl p-3">
-                    <div class="flex justify-between text-[10px] font-bold text-slate-300 mb-2">
-                        <span>Progreso general</span>
-                        <span>${progreso.porcentaje}%</span>
+            <article class="bg-slate-800 rounded-xl border ${estilo.border} shadow-xl text-xs overflow-hidden">
+                <button type="button" onclick="toggleDetallePedido('${pedido.idPedido}')" aria-expanded="${estaExpandido}" class="w-full p-4 text-left space-y-3 active:bg-slate-700/50">
+                    <div class="flex justify-between gap-3">
+                        <span class="font-mono bg-slate-900 px-2 py-0.5 rounded text-emerald-300 font-bold tracking-wider">${pedido.idPedido}</span>
+                        <span class="font-black ${estilo.text} uppercase">${pedido.estadoPedido}</span>
                     </div>
-                    <div class="h-2 bg-slate-900 rounded-full overflow-hidden">
-                        <div class="${estilo.bar} h-full rounded-full" style="width:${progreso.porcentaje}%"></div>
+                    <div class="flex justify-between gap-3">
+                        <div class="min-w-0">
+                            <h4 class="text-sm font-black text-slate-100 break-words">${pedido.cliente}</h4>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Código: ${pedido.codigoCliente}</p>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <span class="block text-[9px] uppercase font-black text-slate-500">Fecha de carga</span>
+                            <span class="font-bold text-slate-200">${formatearFechaCargaPedido(pedido.fechaCarga)}</span>
+                        </div>
+                    </div>
+                    <div class="${estilo.bg} border ${estilo.border} rounded-lg p-3">
+                        <div class="flex justify-between text-[10px] font-bold text-slate-300 mb-2">
+                            <span>Progreso general</span>
+                            <span>${progreso.porcentaje}%</span>
+                        </div>
+                        <div class="h-2 bg-slate-900 rounded-full overflow-hidden">
+                            <div class="${estilo.bar} h-full rounded-full" style="width:${progreso.porcentaje}%"></div>
+                        </div>
+                    </div>
+                </button>
+                <div class="${estaExpandido ? '' : 'hidden'} px-4 pb-4 space-y-3 border-t border-slate-700/70">
+                    ${pedido.nota ? `<p class="text-[10px] text-slate-400 pt-3"><span class="font-black uppercase text-slate-500">Nota:</span> ${pedido.nota}</p>` : ""}
+                    <div class="${pedido.nota ? '' : 'pt-3'}">
+                        <h5 class="text-[9px] font-black uppercase text-slate-500">Detalle del armado</h5>
+                    </div>
+                    ${lineasHtml}
+                    <div class="grid grid-cols-3 gap-2 pt-1 ${isAdmin ? '' : 'hidden'}">
+                        <button onclick="ocultarPedidoCliente('${pedido.idPedido}')" class="bg-slate-700 text-white text-[10px] font-bold py-2 rounded-lg">Ocultar</button>
+                        <button onclick="cancelarPedidoCliente('${pedido.idPedido}')" class="bg-amber-600 text-slate-950 text-[10px] font-black py-2 rounded-lg">Cancelar</button>
+                        <button onclick="eliminarPedidoCliente('${pedido.idPedido}')" class="bg-rose-600 text-white text-[10px] font-black py-2 rounded-lg">Eliminar</button>
                     </div>
                 </div>
-                ${lineasHtml}
-                <div class="grid grid-cols-3 gap-2 pt-1 ${isAdmin ? '' : 'hidden'}">
-                    <button onclick="ocultarPedidoCliente('${pedido.idPedido}')" class="bg-slate-700 text-white text-[10px] font-bold py-2 rounded-xl">Ocultar</button>
-                    <button onclick="cancelarPedidoCliente('${pedido.idPedido}')" class="bg-amber-600 text-slate-950 text-[10px] font-black py-2 rounded-xl">Cancelar</button>
-                    <button onclick="eliminarPedidoCliente('${pedido.idPedido}')" class="bg-rose-600 text-white text-[10px] font-black py-2 rounded-xl">Eliminar</button>
-                </div>
-            </div>`;
+            </article>`;
     });
 }
 

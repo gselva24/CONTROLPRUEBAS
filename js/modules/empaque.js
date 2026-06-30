@@ -39,9 +39,11 @@ function detallesEmpaqueElegibles(idPedido) {
 function renderEmpaqueLoteSelect() {
     const select = document.getElementById('e-lote-fruta-select');
     if (!select) return;
+    const detalle = buscarDetalleEmpaqueSeleccionado();
     select.innerHTML = '<option value="">-- Seleccionar lote de fruta --</option>';
     pedidosPendientes
         .filter(p => p.visibleApp === "SI" && p.estadoFrutas === "Finalizado" && p.estadoEmpaqueGlobal !== "Empacado Total")
+        .filter(p => !detalle || normalizarTextoFront(p.fruta) === normalizarTextoFront(detalle.producto))
         .forEach(p => {
             const disponible = Number(p.pesoDisponibleEmpaque || p.pesoProcesado || 0);
             select.innerHTML += `<option value="${p.id}">${p.id} - ${p.fruta} (${disponible} lb disp.)</option>`;
@@ -61,6 +63,7 @@ function normalizarTextoFront(valor) {
 
 function actualizarInfoPedidoEmpaque() {
     const detalle = buscarDetalleEmpaqueSeleccionado();
+    renderEmpaqueLoteSelect();
     if (detalle && detalle.presentacion) {
         const match = String(detalle.presentacion).match(/(\d+(?:\.\d+)?)/);
         if (match && !document.getElementById('e-presentacion-lb').value) {
@@ -123,8 +126,17 @@ function submitEmpaque() {
     if (!pedido) { alert("Seleccione un pedido de cliente."); return; }
     if (!detalle) { alert("Seleccione una línea de empaque del armado."); return; }
     if (!lote) { alert("Seleccione un lote de fruta disponible."); return; }
+    if (normalizarTextoFront(lote.fruta) !== normalizarTextoFront(detalle.producto)) {
+        alert("La fruta del lote no coincide con la fruta solicitada en el pedido.");
+        return;
+    }
     if (!presentacionLb || presentacionLb <= 0) { alert("Ingrese presentación en lb por caja."); return; }
     if (!cajas || cajas <= 0) { alert("Ingrese cajas hechas."); return; }
+    const cajasPendientes = Number(detalle.cantidadPedida || 0) - Number(detalle.cantidadCompletada || 0);
+    if (cajas > cajasPendientes) {
+        alert(`La línea solo tiene ${cajasPendientes} ${detalle.unidad} pendientes.`);
+        return;
+    }
     if (estadoUsoLote === "Empacado Parcial" && (sobranteLb <= 0 || sobranteLb >= Number(lote.pesoDisponibleEmpaque || lote.pesoProcesado || 0))) {
         alert("Ingrese un sobrante mayor a cero y menor al disponible del lote.");
         return;

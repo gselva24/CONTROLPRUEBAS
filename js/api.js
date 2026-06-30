@@ -12,6 +12,7 @@
                 clientesCatalog = data.clientes || [];
                 pedidosCliente = data.pedidosCliente || [];
                 detallePedidosCliente = data.detallePedidosCliente || [];
+                empaqueSesiones = data.empaqueSesiones || [];
                 
                 renderFrutasSelect(); 
                 renderParcialesSelect(); 
@@ -19,6 +20,7 @@
                 renderBodegaSelect();
                 renderBodegaInventory();
                 renderClientesSelect();
+                actualizarCampoProductoPedido();
                 renderPedidosResumen();
                 renderPedidosCards();
                 renderClientesList();

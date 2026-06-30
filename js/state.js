@@ -7,6 +7,7 @@
         let clientesCatalog = [];
         let pedidosCliente = [];
         let detallePedidosCliente = [];
+        let empaqueSesiones = [];
         let bodegaNuevoMode = false;
         
         let isRetomadoMode = false; 

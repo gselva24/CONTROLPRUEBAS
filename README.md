@@ -14,7 +14,7 @@ Aplicacion web para registrar y consultar operaciones de planta: frutas, empaque
 - `js/modules/empaque.js`: flujo de empaque vinculado a pedidos de cliente, lineas de armado y lotes de fruta.
 - `js/modules/bodega.js`: flujo de bodega e inventario.
 - `js/modules/pedidos.js`: pedidos de cliente, armados, catalogo de clientes y progreso.
-- `js/modules/historial.js`: tarjetas de historial y trazabilidad.
+- `js/modules/historial.js`: avance de pedidos, sesiones de empaque y trazabilidad del uso de lotes.
 - `js/modules/admin.js`: acciones de gerente, catalogo y gestion de lotes.
 - `apps-script/Code.gs`: backend de Google Apps Script para leer/escribir en Google Sheets.
 - `docs/estructura-google-sheets.md`: referencia de hojas y columnas esperadas.
@@ -30,3 +30,11 @@ Aplicacion web para registrar y consultar operaciones de planta: frutas, empaque
 ## Nota de arquitectura
 
 La version actual separa HTML, CSS, JavaScript base y modulos por area sin cambiar la experiencia de uso. Los siguientes cambios funcionales deben hacerse principalmente en el modulo correspondiente y tocar `js/api.js`, `js/state.js`, `apps-script/Code.gs` o la documentacion solo cuando el cambio necesite datos compartidos, backend o nuevas columnas.
+
+Las lineas de pedido del area Empaque usan el mismo catalogo de frutas que el modulo Frutas. El frontend filtra los lotes disponibles y Apps Script rechaza cualquier intento de registrar una fruta diferente.
+
+Prueba rapida de la relacion pedido/fruta/lote e Historial:
+
+```powershell
+node tests/smoke.js
+```
