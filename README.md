@@ -19,6 +19,7 @@ Aplicacion web para registrar y consultar operaciones de planta: frutas, empaque
 - `apps-script/Code.gs`: backend de Google Apps Script para leer/escribir en Google Sheets.
 - `docs/estructura-google-sheets.md`: referencia de hojas y columnas esperadas.
 - `docs/flujo-productos-pedidos.md`: metodologia de productos, lineas y asignaciones.
+- `docs/pendientes-futuros.md`: decisiones funcionales reservadas para integraciones futuras.
 
 ## Flujo de trabajo recomendado
 

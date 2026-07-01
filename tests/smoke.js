@@ -40,12 +40,28 @@ const context = vm.createContext({
 
 [
     "js/state.js",
+    "js/modules/frutas.js",
     "js/modules/empaque.js",
     "js/modules/pedidos.js",
     "js/modules/historial.js"
 ].forEach(file => {
     vm.runInContext(fs.readFileSync(path.join(root, file), "utf8"), context, { filename: file });
 });
+
+elements["f-pedido-parcial-select"] = element();
+
+vm.runInContext(`
+    pedidosParciales = [{
+        id: "0107-PR-001",
+        nombre: "Lote de prueba",
+        fruta: "Nance",
+        estadoFrutas: "Pausado",
+        visibleApp: "SI"
+    }];
+    renderParcialesSelect();
+`, context);
+
+assert.match(elements["f-pedido-parcial-select"].innerHTML, /0107-PR-001 - Nance - Lote de prueba \(Pausado\)/);
 
 elements["e-pedido-cliente-select"] = element();
 elements["e-pedido-cliente-select"].value = "CLI-0107-001";

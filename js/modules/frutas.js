@@ -103,6 +103,7 @@ function iniciarLoteFrutas() {
                 document.getElementById('f-peso-in').value = lote.pesoEntrada;
                 info.innerHTML = `
                     <div><span class="text-slate-400">Estado:</span> <span class="font-black text-amber-300">${lote.estadoFrutas}</span></div>
+                    <div><span class="text-slate-400">Fruta / producto:</span> <span class="font-bold">${lote.fruta || '-'}</span></div>
                     <div><span class="text-slate-400">Entrada:</span> <span class="font-bold">${lote.pesoEntrada} lb</span></div>
                     <div><span class="text-slate-400">Proveedor:</span> <span class="font-bold">${lote.proveedorIniciales || '-'}</span></div>`;
                 info.classList.remove('hidden');
@@ -122,6 +123,6 @@ function renderParcialesSelect() {
     sel.innerHTML = '<option value="">- Seleccione -</option>';
     pedidosParciales
         .filter(p => p.visibleApp === "SI")
-        .forEach(p => sel.innerHTML += `<option value="${p.id}">${p.id} - ${p.nombre} (${p.estadoFrutas})</option>`);
+        .forEach(p => sel.innerHTML += `<option value="${p.id}">${p.id} - ${p.fruta || 'Sin producto'} - ${p.nombre} (${p.estadoFrutas})</option>`);
 }
 
