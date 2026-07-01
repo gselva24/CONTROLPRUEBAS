@@ -1,3 +1,3 @@
-﻿const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbwq6uE7f06g_z9L-R-Z17I9qnpuGlH3lYIVGIBmf4nNVG19kaGgT9ICOSgvZvudavhdeg/exec"; 
+﻿const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyJfbnapYrgSeD-9PY8aUaxsjidAHaeszurAPQKPzapn8JhP8_qPGZQAN2lTkiP9Z27Fg/exec"; 
         const GERENTE_PASSWORD = "PRODUCCION2026";
 
