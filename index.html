@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema V2 - Planta Frutas y Empaque</title>
+    <title>Sistema V2 - Control de Producción</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -28,6 +28,16 @@
                     <span class="text-3xl">🍓</span>
                     <div class="text-left"><span class="block font-black text-lg">Área de Frutas</span></div>
                     <span class="text-slate-500 font-bold">➔</span>
+                </button>
+                <button onclick="switchView('planchas')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
+                    <span class="text-xl font-black text-sky-400">PLA</span>
+                    <div class="text-left"><span class="block font-black text-lg">Área de Planchas</span></div>
+                    <span class="text-slate-500 font-bold">></span>
+                </button>
+                <button onclick="switchView('tamales')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
+                    <span class="text-xl font-black text-rose-400">TAM</span>
+                    <div class="text-left"><span class="block font-black text-lg">Área de Tamales</span></div>
+                    <span class="text-slate-500 font-bold">></span>
                 </button>
                 <button onclick="switchView('empaque')" class="bg-slate-800 border-2 border-slate-700 p-6 rounded-2xl flex items-center justify-between shadow-xl transition active:scale-95">
                     <span class="text-3xl">📦</span>
@@ -118,6 +128,86 @@
             </div>
         </section>
 
+        <section id="view-planchas" class="app-view hidden space-y-4">
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">Volver</button>
+                <h2 class="text-lg font-extrabold text-sky-400">Área de Planchas</h2>
+                <p class="text-xs text-slate-400">Reporte de unidades terminadas destinadas a Empaque.</p>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cliente destinatario:</label>
+                    <select id="pl-cliente-select" onchange="actualizarProductosPlanchas()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Producto:</label>
+                    <select id="pl-producto-select" onchange="actualizarProductosPlanchas()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                </div>
+                <div id="pl-producto-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs"></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Unidades funcionales:</label>
+                        <input id="pl-funcionales" type="number" min="1" step="1" oninput="actualizarTotalPlanchas()" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Avería:</label>
+                        <input id="pl-averia" type="number" min="0" step="1" oninput="actualizarTotalPlanchas()" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-3">
+                    <span class="block text-[10px] uppercase font-bold text-slate-500">Total físico producido</span>
+                    <strong id="pl-total" class="text-2xl text-sky-300">0</strong>
+                    <span class="text-xs text-slate-400"> unidades</span>
+                </div>
+                <input id="pl-responsable" type="text" placeholder="Responsable" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                <textarea id="pl-nota" rows="2" placeholder="Nota / referencia" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm resize-none"></textarea>
+                <button onclick="submitPlanchas()" class="w-full bg-sky-600 text-white font-black py-4 rounded-xl text-sm uppercase">Guardar reporte</button>
+            </div>
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-3">
+                <h3 class="text-xs font-black text-slate-300 uppercase">Producciones disponibles</h3>
+                <div id="pl-reportes" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <section id="view-tamales" class="app-view hidden space-y-4">
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+                <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">Volver</button>
+                <h2 class="text-lg font-extrabold text-rose-400">Área de Tamales</h2>
+                <p class="text-xs text-slate-400">Reporte de unidades terminadas destinadas a Empaque.</p>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cliente destinatario:</label>
+                    <select id="ta-cliente-select" onchange="actualizarProductosTamales()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Producto:</label>
+                    <select id="ta-producto-select" onchange="actualizarProductosTamales()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                </div>
+                <div id="ta-producto-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs"></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Unidades funcionales:</label>
+                        <input id="ta-funcionales" type="number" min="1" step="1" oninput="actualizarTotalTamales()" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Avería:</label>
+                        <input id="ta-averia" type="number" min="0" step="1" oninput="actualizarTotalTamales()" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-3">
+                    <span class="block text-[10px] uppercase font-bold text-slate-500">Total físico producido</span>
+                    <strong id="ta-total" class="text-2xl text-rose-300">0</strong>
+                    <span class="text-xs text-slate-400"> unidades</span>
+                </div>
+                <input id="ta-responsable" type="text" placeholder="Responsable" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                <textarea id="ta-nota" rows="2" placeholder="Nota / referencia" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm resize-none"></textarea>
+                <button onclick="submitTamales()" class="w-full bg-rose-600 text-white font-black py-4 rounded-xl text-sm uppercase">Guardar reporte</button>
+            </div>
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-3">
+                <h3 class="text-xs font-black text-slate-300 uppercase">Producciones disponibles</h3>
+                <div id="ta-reportes" class="space-y-2"></div>
+            </div>
+        </section>
+
         <section id="view-empaque" class="app-view hidden space-y-4">
             <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
                 <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
@@ -134,7 +224,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Lote de fruta disponible:</label>
+                    <label id="e-fuente-label" class="block text-xs font-bold uppercase text-slate-400 mb-1">Lote de fruta disponible:</label>
                     <select id="e-lote-fruta-select" onchange="actualizarInfoEmpaque()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm text-amber-200 font-medium"></select>
                 </div>
 
@@ -142,7 +232,7 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Presentación (lb/caja):</label>
+                        <label id="e-medida-label" class="block text-xs font-bold uppercase text-slate-400 mb-1">Presentación (lb/caja):</label>
                         <input type="number" id="e-presentacion-lb" placeholder="10" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                     </div>
                     <div>
@@ -151,7 +241,7 @@
                     </div>
                 </div>
 
-                <div>
+                <div id="e-uso-lote-wrapper">
                     <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Uso del lote:</label>
                     <select id="e-estado-uso-lote" onchange="actualizarCamposUsoLote()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
                         <option value="Empacado Total">Lote utilizado completo</option>
@@ -333,6 +423,8 @@
                         <input type="text" id="p-producto-base-produccion" list="p-productos-base-options" placeholder="Producto base de producción: Nance" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                         <datalist id="p-areas-options">
                             <option value="Empaque"></option>
+                            <option value="Planchas"></option>
+                            <option value="Tamales"></option>
                         </datalist>
                         <datalist id="p-productos-base-options"></datalist>
                         <button onclick="agregarProductoGeneral()" class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Guardar producto general</button>
@@ -369,8 +461,10 @@
         </section>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid grid-cols-5 gap-1 z-50 shadow-2xl backdrop-blur-lg">
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid grid-cols-7 gap-1 z-50 shadow-2xl backdrop-blur-lg">
         <button onclick="switchView('frutas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">🍓</span><span class="text-[9px]">Frutas</span></button>
+        <button onclick="switchView('planchas')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-xs text-sky-400">PLA</span><span class="text-[9px]">Planchas</span></button>
+        <button onclick="switchView('tamales')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-xs text-rose-400">TAM</span><span class="text-[9px]">Tamales</span></button>
         <button onclick="switchView('empaque')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">📦</span><span class="text-[9px]">Empaque</span></button>
         <button onclick="switchView('bodega')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">INV</span><span class="text-[9px]">Bodega</span></button>
         <button onclick="switchView('pedidos')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">PED</span><span class="text-[9px]">Pedidos</span></button>
@@ -380,6 +474,9 @@
     <script src="js/state.js"></script>
     <script src="js/api.js"></script>
     <script src="js/modules/frutas.js"></script>
+    <script src="js/modules/produccion.js"></script>
+    <script src="js/modules/planchas.js"></script>
+    <script src="js/modules/tamales.js"></script>
     <script src="js/modules/empaque.js"></script>
     <script src="js/modules/bodega.js"></script>
     <script src="js/modules/pedidos.js"></script>

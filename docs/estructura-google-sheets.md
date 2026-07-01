@@ -201,6 +201,12 @@ La aplicacion usa estas filas para mostrar en Historial los pedidos en los que p
 | V | ID_Asignacion |
 | W | ID_Lote_Tecnico |
 | X | ID_Pedido_Tecnico |
+| Y | Tipo_Fuente |
+| Z | ID_Produccion |
+| AA | Codigo_Produccion |
+| AB | Categoria_Unidades |
+| AC | Unidades_Por_Caja |
+| AD | Unidades_Consumidas |
 
 Para una linea del area `Empaque`, `Producto_Base_Produccion` debe coincidir con la fruta del lote seleccionado. El nombre comercial puede ser diferente para cada cliente.
 
@@ -208,7 +214,42 @@ Para una linea del area `Empaque`, `Producto_Base_Produccion` debe coincidir con
 
 El peso reincorporado se calcula como `Cajas_Hechas * Presentacion_Lb` y nunca puede superar `Peso_Neto_Final_Lb` del lote. Despues se recalculan `Estado_Empaque`, `Peso_Disponible_Empaque_Lb`, `Empaque_Salidas` y `Control_Materia_Prima`.
 
-Los modulos futuros que asignen otros productos a pedidos deben guardar un registro de asignacion con estado activo/revertido y agregar su adaptador de reincorporacion dentro de `revertirAsignacionesPedidoCliente_`. Actualmente el flujo operativo conectado es Empaque con lotes de `Pedidos_Fruta`.
+Los modulos futuros que asignen otros productos a pedidos deben guardar un registro de asignacion con estado activo/revertido y agregar su adaptador de reincorporacion dentro de `revertirAsignacionesPedidoCliente_`. Actualmente Empaque admite lotes de `Pedidos_Fruta` y reportes de `Produccion_Areas`.
+
+`Tipo_Fuente` distingue `Fruta` y `Produccion`. Para una fuente de produccion,
+`Categoria_Unidades` usa `Funcional` o `Averia`. Al cancelar un pedido, las
+unidades consumidas se reincorporan a la misma categoria del reporte de origen.
+
+## Produccion_Areas
+
+Reportes terminados de Planchas y Tamales. No contienen `ID_Pedido`; Empaque
+realiza posteriormente la asignacion.
+
+| Columna | Nombre |
+| --- | --- |
+| A | ID_Produccion |
+| B | Codigo_Produccion |
+| C | Fecha |
+| D | Area |
+| E | ID_Cliente |
+| F | Codigo_Cliente |
+| G | Cliente |
+| H | ID_Producto |
+| I | ID_Producto_Cliente |
+| J | Producto |
+| K | Presentacion |
+| L | Unidades_Funcionales |
+| M | Unidades_Averia |
+| N | Total_Fisico |
+| O | Funcionales_Disponibles |
+| P | Averia_Disponible |
+| Q | Estado_Disponibilidad |
+| R | Responsable |
+| S | Nota |
+| T | Visible_App |
+
+`Total_Fisico` es la suma de unidades funcionales y averia. Los estados de
+disponibilidad son `Disponible`, `Parcial` y `Agotado`.
 
 ## Asignaciones_Pedido
 

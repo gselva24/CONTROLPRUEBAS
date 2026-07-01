@@ -40,6 +40,31 @@ Cada sesion:
 
 La linea permanece disponible hasta completar la cantidad de cajas pedida, por lo que pueden utilizarse varios lotes y varias sesiones.
 
+## Produccion de Planchas y Tamales
+
+Los supervisores reportan la produccion terminada una sola vez. El reporte
+selecciona cliente y producto, pero no selecciona pedido ni actualiza su avance.
+
+Cada reporte separa:
+
+- unidades funcionales destinadas al cliente;
+- unidades de averia reutilizable;
+- total fisico producido.
+
+El sistema genera automaticamente el identificador y codigo de produccion. Las
+unidades funcionales solo pueden utilizarse para pedidos del cliente
+destinatario. La averia puede utilizarse en pedidos futuros de cualquier cliente
+cuando coincide el mismo `ID_Producto`.
+
+Empaque selecciona la linea del pedido y consume unidades de uno o varios
+reportes. La cantidad consumida se calcula como:
+
+`Cajas_Hechas * Unidades_Por_Caja`
+
+Hasta incorporar el dato definitivo al catalogo, Empaque ingresa manualmente
+`Unidades_Por_Caja`. Solo el registro de Empaque incrementa
+`Cantidad_Completada` en la linea del pedido.
+
 ## Compatibilidad
 
 Los pedidos y sesiones anteriores conservan los campos de texto y reciben UUID durante la migracion. Los pedidos nuevos usan los catalogos y relaciones tecnicas.

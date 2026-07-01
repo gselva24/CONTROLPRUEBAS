@@ -266,4 +266,108 @@ assert.equal(sheets.Asignaciones_Pedido.getLastRow(), 4);
 assert.equal(sheets.Asignaciones_Pedido.valueAt(4, 4), idLineaP2);
 assert.equal(sheets.Asignaciones_Pedido.valueAt(4, 10), "Activa");
 
+const idClienteC1 = sheets.Clientes.valueAt(2, 4);
+sheets.Productos.appendRow([
+    "PROD-TAMAL", "Tamal Pisque", "12x4x6.35 oz.", "Tamales", "Tamal Pisque", "SI", "2026-07-01"
+]);
+sheets.Productos_Cliente.appendRow([
+    "SKU-TAMAL", idClienteC1, "C1", "PROD-TAMAL", "TAMAL PISQUE 12x4x6.35 oz.", "SI", "2026-07-01"
+]);
+sheets.Pedidos_Cliente.appendRow([
+    "P3", "2026-07-01", "Cliente 1", "C1", "2026-07-02", "Abierto", "SI", "", "PED-TECH-P3", idClienteC1
+]);
+sheets.Detalle_Pedido_Cliente.appendRow([
+    "P3", "Tamales", "TAMAL PISQUE 12x4x6.35 oz.", "12x4x6.35 oz.", "cajas",
+    12, 0, "Pendiente", "SI", "", "LINE-P3", "PED-TECH-P3", "SKU-TAMAL", "PROD-TAMAL", "Tamal Pisque"
+]);
+
+const productionResponse = vm.runInContext(`doPost({
+    postData: {
+        contents: JSON.stringify({
+            action: "registroProduccionArea",
+            area: "Tamales",
+            idCliente: "${idClienteC1}",
+            idProductoCliente: "SKU-TAMAL",
+            unidadesFuncionales: 1900,
+            unidadesAveria: 100,
+            responsable: "Supervisor Tamales",
+            nota: "Prueba de produccion",
+            fecha: "2026-07-01"
+        })
+    }
+})`, context);
+const productionData = JSON.parse(productionResponse.text);
+
+assert.equal(productionData.status, "success");
+assert.match(productionData.codigoProduccion, /^TAM-\d{4}-001$/);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 12), 1900);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 13), 100);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 14), 2000);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 15), 1900);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 16), 100);
+
+const packingProductionResponse = vm.runInContext(`doPost({
+    postData: {
+        contents: JSON.stringify({
+            action: "registroEmpaqueProduccion",
+            idPedidoCliente: "P3",
+            idLinea: "LINE-P3",
+            idProduccion: "${productionData.idProduccion}",
+            categoriaUnidades: "Funcional",
+            unidadesPorCaja: 48,
+            cajas: 10,
+            responsable: "Supervisor Empaque",
+            nota: "Primer empaque",
+            fecha: "2026-07-01"
+        })
+    }
+})`, context);
+const packingProductionData = JSON.parse(packingProductionResponse.text);
+
+assert.equal(packingProductionData.status, "success");
+assert.equal(packingProductionData.unidadesConsumidas, 480);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 15), 1420);
+assert.equal(sheets.Detalle_Pedido_Cliente.valueAt(4, 7), 10);
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 25), "Produccion");
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 28), "Funcional");
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 30), 480);
+
+const packingAveriaResponse = vm.runInContext(`doPost({
+    postData: {
+        contents: JSON.stringify({
+            action: "registroEmpaqueProduccion",
+            idPedidoCliente: "P3",
+            idLinea: "LINE-P3",
+            idProduccion: "${productionData.idProduccion}",
+            categoriaUnidades: "Averia",
+            unidadesPorCaja: 48,
+            cajas: 2,
+            responsable: "Supervisor Empaque",
+            nota: "Uso de averia",
+            fecha: "2026-07-01"
+        })
+    }
+})`, context);
+const packingAveriaData = JSON.parse(packingAveriaResponse.text);
+
+assert.equal(packingAveriaData.status, "success");
+assert.equal(sheets.Produccion_Areas.valueAt(2, 16), 4);
+assert.equal(sheets.Detalle_Pedido_Cliente.valueAt(4, 7), 12);
+
+const productionReversal = vm.runInContext(
+    'revertirAsignacionesPedidoCliente_(SpreadsheetApp.getActiveSpreadsheet(), "P3", "Pedido cancelado")',
+    context
+);
+
+assert.equal(productionReversal.length, 2);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 15), 1900);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 16), 100);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 17), "Disponible");
+
+const getResponse = vm.runInContext("doGet({})", context);
+const cloudData = JSON.parse(getResponse.text);
+assert.equal(cloudData.produccionesAreas.length, 1);
+assert.equal(cloudData.produccionesAreas[0].totalFisico, 2000);
+assert.equal(cloudData.empaqueSesiones.filter(item => item.tipoFuente === "Produccion").length, 2);
+
 console.log("Apps Script cancellation tests passed.");

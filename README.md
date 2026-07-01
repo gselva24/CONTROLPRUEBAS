@@ -11,7 +11,10 @@ Aplicacion web para registrar y consultar operaciones de planta: frutas, empaque
 - `js/state.js`: estado compartido en memoria para catalogos, lotes, historial e inventario.
 - `js/api.js`: sincronizacion con Apps Script y operaciones compartidas de guardado.
 - `js/modules/frutas.js`: flujo de lotes de frutas.
-- `js/modules/empaque.js`: flujo de empaque vinculado a pedidos de cliente, lineas de armado y lotes de fruta.
+- `js/modules/produccion.js`: logica compartida de reportes de produccion por unidades.
+- `js/modules/planchas.js`: entrada del modulo de Planchas.
+- `js/modules/tamales.js`: entrada del modulo de Tamales.
+- `js/modules/empaque.js`: flujo de empaque vinculado a pedidos, lotes de fruta y producciones por unidades.
 - `js/modules/bodega.js`: flujo de bodega e inventario.
 - `js/modules/pedidos.js`: pedidos, catalogos generales, nombres comerciales por cliente y progreso.
 - `js/modules/historial.js`: sesiones de empaque y trazabilidad del uso de lotes.
@@ -36,6 +39,8 @@ La version actual separa HTML, CSS, JavaScript base y modulos por area sin cambi
 Los pedidos usan un catalogo general de productos y una relacion de nombres comerciales por cliente. Las lineas, pedidos, lotes, asignaciones y movimientos tienen UUID tecnicos preparados para migrar a PostgreSQL.
 
 Las lineas del area Empaque guardan un producto base de produccion. El frontend filtra los lotes por esa base y Apps Script vuelve a verificar la coincidencia.
+
+Planchas y Tamales reportan unidades funcionales y averia por cliente y producto, sin modificar pedidos. Empaque consume esas unidades y solo entonces actualiza las cajas completadas.
 
 Al cancelar o eliminar un pedido, Apps Script revierte sus sesiones activas de empaque y reincorpora el peso asignado a los lotes de fruta. Las sesiones se conservan como registros revertidos para auditoria.
 

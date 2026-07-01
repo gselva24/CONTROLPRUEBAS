@@ -396,7 +396,11 @@ function postPedidos(payload, successMessage, modeAfter = "lista") {
             let mensaje = successMessage;
             if (payload.action === "cancelarPedidoCliente" && Array.isArray(resData.lotesLiberados)) {
                 const pesoLiberado = resData.lotesLiberados.reduce((total, lote) => total + Number(lote.pesoReincorporadoLb || 0), 0);
-                mensaje += ` Se liberaron ${resData.lotesLiberados.length} lote(s) y ${pesoLiberado.toLocaleString('es-GT', { maximumFractionDigits: 2 })} lb.`;
+                const unidadesLiberadas = resData.lotesLiberados.reduce((total, lote) => total + Number(lote.unidadesReincorporadas || 0), 0);
+                const partes = [];
+                if (pesoLiberado > 0) partes.push(`${pesoLiberado.toLocaleString('es-GT', { maximumFractionDigits: 2 })} lb`);
+                if (unidadesLiberadas > 0) partes.push(`${unidadesLiberadas.toLocaleString('es-GT')} unidades`);
+                if (partes.length) mensaje += ` Se reincorporaron ${partes.join(" y ")} a sus fuentes.`;
             }
             alert(mensaje);
             if (payload.action === "crearPedidoCliente") resetPedidoForm();

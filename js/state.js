@@ -11,6 +11,7 @@
         let detallePedidosCliente = [];
         let asignacionesPedido = [];
         let empaqueSesiones = [];
+        let produccionesAreas = [];
         let bodegaNuevoMode = false;
         
         let isRetomadoMode = false; 

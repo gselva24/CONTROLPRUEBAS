@@ -16,9 +16,12 @@
                 detallePedidosCliente = data.detallePedidosCliente || [];
                 asignacionesPedido = data.asignacionesPedido || [];
                 empaqueSesiones = data.empaqueSesiones || [];
+                produccionesAreas = data.produccionesAreas || [];
                 
                 renderFrutasSelect(); 
                 renderParcialesSelect(); 
+                if (typeof renderPlanchas === "function") renderPlanchas();
+                if (typeof renderTamales === "function") renderTamales();
                 renderEmpaqueSelect(); 
                 renderBodegaSelect();
                 renderBodegaInventory();

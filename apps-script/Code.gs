@@ -2,7 +2,7 @@
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   asegurarEstructuraTecnica_(ss, false);
-  var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], productos: [], productosCliente: [], pedidosCliente: [], detallePedidosCliente: [], asignacionesPedido: [], empaqueSesiones: [] };
+  var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], productos: [], productosCliente: [], pedidosCliente: [], detallePedidosCliente: [], asignacionesPedido: [], empaqueSesiones: [], produccionesAreas: [] };
 
   // 1. Cargar Opciones del Catálogo
   var sheetOpciones = ss.getSheetByName("Opciones");
@@ -200,6 +200,36 @@ function doGet(e) {
     }
   }
 
+  var sheetProduccionAreas = ss.getSheetByName("Produccion_Areas");
+  if (sheetProduccionAreas) {
+    var produccionData = sheetProduccionAreas.getDataRange().getValues();
+    for (var pa = 1; pa < produccionData.length; pa++) {
+      if (!produccionData[pa][0]) continue;
+      data.produccionesAreas.push({
+        idProduccion: produccionData[pa][0],
+        codigoProduccion: produccionData[pa][1],
+        fecha: produccionData[pa][2],
+        area: produccionData[pa][3],
+        idCliente: produccionData[pa][4],
+        codigoCliente: produccionData[pa][5],
+        cliente: produccionData[pa][6],
+        idProducto: produccionData[pa][7],
+        idProductoCliente: produccionData[pa][8],
+        producto: produccionData[pa][9],
+        presentacion: produccionData[pa][10],
+        unidadesFuncionales: numeroEnteroSeguro_(produccionData[pa][11]),
+        unidadesAveria: numeroEnteroSeguro_(produccionData[pa][12]),
+        totalFisico: numeroEnteroSeguro_(produccionData[pa][13]),
+        funcionalesDisponibles: numeroEnteroSeguro_(produccionData[pa][14]),
+        averiaDisponible: numeroEnteroSeguro_(produccionData[pa][15]),
+        estadoDisponibilidad: produccionData[pa][16] || "Disponible",
+        responsable: produccionData[pa][17] || "",
+        nota: produccionData[pa][18] || "",
+        visibleApp: produccionData[pa][19] || "SI"
+      });
+    }
+  }
+
   var sheetEmpaqueSesiones = ss.getSheetByName("Empaque_Sesiones");
   if (sheetEmpaqueSesiones) {
     var sesionesData = sheetEmpaqueSesiones.getDataRange().getValues();
@@ -231,7 +261,13 @@ function doGet(e) {
         idLinea: sesionesData[se][20] || "",
         idAsignacion: sesionesData[se][21] || "",
         idLoteTecnico: sesionesData[se][22] || "",
-        idPedidoTecnico: sesionesData[se][23] || ""
+        idPedidoTecnico: sesionesData[se][23] || "",
+        tipoFuente: sesionesData[se][24] || (sesionesData[se][11] ? "Fruta" : ""),
+        idProduccion: sesionesData[se][25] || "",
+        codigoProduccion: sesionesData[se][26] || "",
+        categoriaUnidades: sesionesData[se][27] || "",
+        unidadesPorCaja: numeroEnteroSeguro_(sesionesData[se][28]),
+        unidadesConsumidas: numeroEnteroSeguro_(sesionesData[se][29])
       });
     }
   }
@@ -552,6 +588,80 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // -- OPERATIVO: REPORTES DE PRODUCCION DE PLANCHAS Y TAMALES --
+    if (params.action === "registroProduccionArea") {
+      var headersProduccion = ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App"];
+      var sheetProduccionPost = getOrCreateSheet_(ss, "Produccion_Areas", headersProduccion);
+      var sheetClientesProduccion = ss.getSheetByName("Clientes");
+      var sheetProductosProduccion = ss.getSheetByName("Productos");
+      var sheetProductosClienteProduccion = ss.getSheetByName("Productos_Cliente");
+      var areaProduccion = normalizarAreaOperativa_(params.area);
+      var unidadesFuncionalesIngresadas = numeroSeguro_(params.unidadesFuncionales);
+      var unidadesAveriaIngresadas = numeroSeguro_(params.unidadesAveria);
+      var unidadesFuncionales = numeroEnteroSeguro_(params.unidadesFuncionales);
+      var unidadesAveria = numeroEnteroSeguro_(params.unidadesAveria);
+      var responsableProduccion = (params.responsable || "").toString().trim();
+
+      if (areaProduccion !== "Planchas" && areaProduccion !== "Tamales") return json_(false, "Seleccione un area de produccion valida.");
+      if (unidadesFuncionalesIngresadas !== unidadesFuncionales || unidadesAveriaIngresadas !== unidadesAveria) return json_(false, "Las cantidades de produccion deben ser numeros enteros.");
+      if (unidadesFuncionales <= 0) return json_(false, "Las unidades funcionales deben ser mayores a cero.");
+      if (numeroSeguro_(params.unidadesAveria) < 0) return json_(false, "La averia no puede ser negativa.");
+      if (!responsableProduccion) return json_(false, "Ingrese el responsable del reporte.");
+
+      var filaClienteProduccion = buscarFilaPorColumna_(sheetClientesProduccion, 4, params.idCliente);
+      var filaRelacionProduccion = buscarFilaPorColumna_(sheetProductosClienteProduccion, 1, params.idProductoCliente);
+      if (filaClienteProduccion === -1 || filaRelacionProduccion === -1) return json_(false, "Seleccione un cliente y producto validos.");
+      if (sheetProductosClienteProduccion.getRange(filaRelacionProduccion, 2).getValue() != params.idCliente) {
+        return json_(false, "El producto seleccionado no pertenece al cliente.");
+      }
+      if (normalizarTexto_(sheetProductosClienteProduccion.getRange(filaRelacionProduccion, 6).getValue()) === "no") {
+        return json_(false, "El producto del cliente esta oculto.");
+      }
+
+      var idProductoProduccion = sheetProductosClienteProduccion.getRange(filaRelacionProduccion, 4).getValue();
+      var filaProductoProduccion = buscarFilaPorColumna_(sheetProductosProduccion, 1, idProductoProduccion);
+      if (filaProductoProduccion === -1) return json_(false, "No se encontro el producto general.");
+      if (normalizarAreaOperativa_(sheetProductosProduccion.getRange(filaProductoProduccion, 4).getValue()) !== areaProduccion) {
+        return json_(false, "El producto no corresponde al area seleccionada.");
+      }
+
+      var idProduccion = crearUuid_();
+      var codigoProduccion = crearCodigoProduccion_(ss, areaProduccion);
+      var codigoClienteProduccion = sheetClientesProduccion.getRange(filaClienteProduccion, 1).getValue();
+      var clienteProduccion = sheetClientesProduccion.getRange(filaClienteProduccion, 2).getValue();
+      var productoProduccion = sheetProductosClienteProduccion.getRange(filaRelacionProduccion, 5).getValue();
+      var presentacionProduccion = sheetProductosProduccion.getRange(filaProductoProduccion, 3).getValue();
+      var totalFisicoProduccion = unidadesFuncionales + unidadesAveria;
+      sheetProduccionPost.appendRow([
+        idProduccion,
+        codigoProduccion,
+        params.fecha || new Date(),
+        areaProduccion,
+        params.idCliente,
+        codigoClienteProduccion,
+        clienteProduccion,
+        idProductoProduccion,
+        params.idProductoCliente,
+        productoProduccion,
+        presentacionProduccion,
+        unidadesFuncionales,
+        unidadesAveria,
+        totalFisicoProduccion,
+        unidadesFuncionales,
+        unidadesAveria,
+        "Disponible",
+        responsableProduccion,
+        params.nota || "",
+        "SI"
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        idProduccion: idProduccion,
+        codigoProduccion: codigoProduccion,
+        totalFisico: totalFisicoProduccion
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // -- OPERATIVO: NUEVO FLUJO DE FRUTAS POR ESTADOS --
     if (params.action === "iniciarLoteFrutas") {
       var sheetFNuevo = getOrCreateSheet_(ss, "Pedidos_Fruta", ["ID", "Fecha", "Nombre_Pedido", "Proveedor_Iniciales", "Fruta", "Peso_Neto_Entrada_Lb", "Peso_Neto_Final_Lb", "Rendimiento_Peso", "Estado_Frutas", "Peso_Averia_Lb", "Peso_Desecho_Lb", "Nota_Final", "Estado_Empaque", "Visible_App", "Peso_Disponible_Empaque_Lb", "ID_Lote_Tecnico"]);
@@ -798,6 +908,146 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({status: "success", idSesionEmpaque: idSesionEmpaque})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (params.action === "registroEmpaqueProduccion") {
+      var headersSesionesProduccion = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas"];
+      var sheetSesionesProduccion = getOrCreateSheet_(ss, "Empaque_Sesiones", headersSesionesProduccion);
+      var sheetAsignacionesProduccion = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible"]);
+      var sheetDetalleProduccion = ss.getSheetByName("Detalle_Pedido_Cliente");
+      var sheetPedidoProduccion = ss.getSheetByName("Pedidos_Cliente");
+      var sheetFuenteProduccion = ss.getSheetByName("Produccion_Areas");
+      if (!sheetDetalleProduccion || !sheetPedidoProduccion || !sheetFuenteProduccion) return json_(false, "Faltan hojas de pedidos o produccion.");
+
+      var cajasProduccion = numeroEnteroSeguro_(params.cajas);
+      var unidadesPorCaja = numeroEnteroSeguro_(params.unidadesPorCaja);
+      var unidadesConsumidas = cajasProduccion * unidadesPorCaja;
+      var categoriaProduccion = normalizarTexto_(params.categoriaUnidades) === "averia" ? "Averia" : "Funcional";
+      if (!params.idPedidoCliente || !params.idLinea) return json_(false, "Seleccione pedido y linea.");
+      if (!params.idProduccion) return json_(false, "Seleccione una produccion disponible.");
+      if (numeroSeguro_(params.cajas) !== cajasProduccion || numeroSeguro_(params.unidadesPorCaja) !== unidadesPorCaja) return json_(false, "Cajas y unidades por caja deben ser numeros enteros.");
+      if (cajasProduccion <= 0 || unidadesPorCaja <= 0) return json_(false, "Ingrese cajas y unidades por caja validas.");
+
+      var filaDetalleProduccion = buscarFilaPorColumna_(sheetDetalleProduccion, 11, params.idLinea);
+      var filaPedidoProduccion = buscarFilaPorId_(sheetPedidoProduccion, params.idPedidoCliente);
+      var filaFuenteProduccion = buscarFilaPorColumna_(sheetFuenteProduccion, 1, params.idProduccion);
+      if (filaDetalleProduccion === -1 || filaPedidoProduccion === -1 || filaFuenteProduccion === -1) {
+        return json_(false, "No se encontro el pedido, la linea o la produccion.");
+      }
+      if (sheetDetalleProduccion.getRange(filaDetalleProduccion, 1).getValue() != params.idPedidoCliente) {
+        return json_(false, "La linea no pertenece al pedido seleccionado.");
+      }
+
+      var estadoPedidoProduccion = sheetPedidoProduccion.getRange(filaPedidoProduccion, 6).getValue();
+      var visiblePedidoProduccion = sheetPedidoProduccion.getRange(filaPedidoProduccion, 7).getValue();
+      var estadoDetalleProduccion = sheetDetalleProduccion.getRange(filaDetalleProduccion, 8).getValue();
+      var visibleDetalleProduccion = sheetDetalleProduccion.getRange(filaDetalleProduccion, 9).getValue();
+      if (
+        normalizarTexto_(estadoPedidoProduccion) === "cancelado" ||
+        normalizarTexto_(estadoPedidoProduccion) === "completado" ||
+        normalizarTexto_(visiblePedidoProduccion) === "no" ||
+        normalizarTexto_(estadoDetalleProduccion) === "cancelado" ||
+        normalizarTexto_(estadoDetalleProduccion) === "completado" ||
+        normalizarTexto_(visibleDetalleProduccion) === "no"
+      ) {
+        return json_(false, "El pedido o la linea ya no acepta registros.");
+      }
+
+      var idProductoDetalleProduccion = sheetDetalleProduccion.getRange(filaDetalleProduccion, 14).getValue();
+      var idProductoFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 8).getValue();
+      if (!idProductoDetalleProduccion || idProductoDetalleProduccion != idProductoFuenteProduccion) {
+        return json_(false, "La produccion no corresponde al producto solicitado.");
+      }
+      if (normalizarTexto_(sheetFuenteProduccion.getRange(filaFuenteProduccion, 20).getValue()) === "no") {
+        return json_(false, "La produccion seleccionada esta oculta.");
+      }
+
+      var idClientePedidoProduccion = sheetPedidoProduccion.getRange(filaPedidoProduccion, 10).getValue();
+      var idClienteFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 5).getValue();
+      if (categoriaProduccion === "Funcional" && idClientePedidoProduccion != idClienteFuenteProduccion) {
+        return json_(false, "Las unidades funcionales fueron producidas para otro cliente.");
+      }
+
+      var columnaDisponibleProduccion = categoriaProduccion === "Averia" ? 16 : 15;
+      var disponibleProduccion = numeroEnteroSeguro_(sheetFuenteProduccion.getRange(filaFuenteProduccion, columnaDisponibleProduccion).getValue());
+      if (unidadesConsumidas > disponibleProduccion) {
+        return json_(false, "La produccion seleccionada no tiene suficientes unidades disponibles.");
+      }
+
+      var pedidaProduccion = numeroEnteroSeguro_(sheetDetalleProduccion.getRange(filaDetalleProduccion, 6).getValue());
+      var completadaAnteriorProduccion = numeroEnteroSeguro_(sheetDetalleProduccion.getRange(filaDetalleProduccion, 7).getValue());
+      if (cajasProduccion > pedidaProduccion - completadaAnteriorProduccion) {
+        return json_(false, "Las cajas ingresadas exceden la cantidad pendiente de la linea.");
+      }
+
+      var nuevoDisponibleProduccion = disponibleProduccion - unidadesConsumidas;
+      sheetFuenteProduccion.getRange(filaFuenteProduccion, columnaDisponibleProduccion).setValue(nuevoDisponibleProduccion);
+      actualizarEstadoDisponibilidadProduccion_(sheetFuenteProduccion, filaFuenteProduccion);
+
+      var completadaProduccion = completadaAnteriorProduccion + cajasProduccion;
+      sheetDetalleProduccion.getRange(filaDetalleProduccion, 7).setValue(completadaProduccion);
+      sheetDetalleProduccion.getRange(filaDetalleProduccion, 8).setValue(completadaProduccion >= pedidaProduccion ? "Completado" : "Parcial");
+
+      var idSesionProduccionEmpaque = crearIdSesionEmpaque_(ss);
+      var idAsignacionProduccion = crearUuid_();
+      var idPedidoTecnicoProduccion = sheetDetalleProduccion.getRange(filaDetalleProduccion, 12).getValue() || sheetPedidoProduccion.getRange(filaPedidoProduccion, 9).getValue() || crearUuid_();
+      var codigoFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 2).getValue();
+      var fechaEmpaqueProduccion = params.fecha || new Date();
+      sheetSesionesProduccion.appendRow([
+        idSesionProduccionEmpaque,
+        fechaEmpaqueProduccion,
+        params.idPedidoCliente,
+        sheetPedidoProduccion.getRange(filaPedidoProduccion, 3).getValue() || "",
+        sheetPedidoProduccion.getRange(filaPedidoProduccion, 4).getValue() || "",
+        sheetDetalleProduccion.getRange(filaDetalleProduccion, 2).getValue() || "",
+        sheetDetalleProduccion.getRange(filaDetalleProduccion, 3).getValue() || "",
+        sheetDetalleProduccion.getRange(filaDetalleProduccion, 4).getValue() || "",
+        sheetDetalleProduccion.getRange(filaDetalleProduccion, 5).getValue() || "cajas",
+        cajasProduccion,
+        0,
+        "",
+        "",
+        nuevoDisponibleProduccion > 0 ? "Uso parcial" : "Uso total",
+        0,
+        params.responsable || "",
+        params.nota || "",
+        "Activa",
+        "",
+        "",
+        params.idLinea,
+        idAsignacionProduccion,
+        params.idProduccion,
+        idPedidoTecnicoProduccion,
+        "Produccion",
+        params.idProduccion,
+        codigoFuenteProduccion,
+        categoriaProduccion,
+        unidadesPorCaja,
+        unidadesConsumidas
+      ]);
+      sheetAsignacionesProduccion.appendRow([
+        idAsignacionProduccion,
+        fechaEmpaqueProduccion,
+        idPedidoTecnicoProduccion,
+        params.idLinea,
+        params.idProduccion,
+        idSesionProduccionEmpaque,
+        "Empaque",
+        cajasProduccion,
+        "cajas",
+        "Activa",
+        "",
+        "",
+        params.idPedidoCliente,
+        codigoFuenteProduccion
+      ]);
+
+      recalcularEstadoPedidoCliente_(ss, params.idPedidoCliente);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        idSesionEmpaque: idSesionProduccionEmpaque,
+        unidadesConsumidas: unidadesConsumidas
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (params.action === "registroEmpaque") {
       var sheetE = getOrCreateSheet_(ss, "Empaque_Salidas", ["ID", "Nombre_Pedido", "Fruta", "Fecha_Empaque", "Cajas", "Estado_Empaque"]);
       var dataE = sheetE.getDataRange().getValues();
@@ -962,7 +1212,7 @@ function migrarEstructuraTecnica() {
 
 function asegurarEstructuraTecnica_(ss, forzar) {
   var properties = PropertiesService.getScriptProperties();
-  var clave = "MIGRACION_TECNICA_V2_" + ss.getId();
+  var clave = "MIGRACION_TECNICA_V3_" + ss.getId();
   if (!forzar && properties.getProperty(clave) === "OK") return;
 
   var sheetClientes = getOrCreateSheet_(ss, "Clientes", ["Codigo_Cliente", "Nombre_Cliente", "Visible_App", "ID_Cliente"]);
@@ -1030,7 +1280,9 @@ function asegurarEstructuraTecnica_(ss, forzar) {
   var sheetMovimientos = getOrCreateSheet_(ss, "Movimientos_Bodega", ["Fecha", "Tipo_Movimiento", "ID", "Producto", "Categoria", "Unidad", "Cantidad", "Stock_Anterior", "Stock_Nuevo", "Responsable", "Nota", "ID_Movimiento"]);
   completarIdsTecnicos_(sheetMovimientos, 12, 1);
 
-  var headersSesiones = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico"];
+  getOrCreateSheet_(ss, "Produccion_Areas", ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App"]);
+
+  var headersSesiones = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas"];
   var sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", headersSesiones);
 
   var sheetAsignaciones = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible"]);
@@ -1136,6 +1388,28 @@ function normalizarTexto_(valor) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
+}
+
+function normalizarAreaOperativa_(valor) {
+  var area = normalizarTexto_(valor);
+  if (area === "plancha" || area === "planchas") return "Planchas";
+  if (area === "tamal" || area === "tamales") return "Tamales";
+  if (area === "empaque") return "Empaque";
+  return (valor || "").toString().trim();
+}
+
+function actualizarEstadoDisponibilidadProduccion_(sheet, fila) {
+  if (!sheet || fila < 2) return;
+  var funcionalesOriginales = numeroEnteroSeguro_(sheet.getRange(fila, 12).getValue());
+  var averiaOriginal = numeroEnteroSeguro_(sheet.getRange(fila, 13).getValue());
+  var funcionalesDisponibles = numeroEnteroSeguro_(sheet.getRange(fila, 15).getValue());
+  var averiaDisponible = numeroEnteroSeguro_(sheet.getRange(fila, 16).getValue());
+  var original = funcionalesOriginales + averiaOriginal;
+  var disponible = funcionalesDisponibles + averiaDisponible;
+  var estado = "Disponible";
+  if (disponible <= 0) estado = "Agotado";
+  else if (disponible < original) estado = "Parcial";
+  sheet.getRange(fila, 17).setValue(estado);
 }
 
 function json_(ok, message) {
@@ -1288,19 +1562,30 @@ function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
   if (!idPedido) return [];
   var sheetSesiones = ss.getSheetByName("Empaque_Sesiones");
   if (!sheetSesiones) return [];
-  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico"]);
+  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas"]);
 
   var dataSesiones = sheetSesiones.getDataRange().getValues();
   var lotesAReincorporar = {};
+  var produccionesAReincorporar = {};
   var ahora = new Date();
   for (var i = 1; i < dataSesiones.length; i++) {
     if (dataSesiones[i][2] != idPedido) continue;
     if (normalizarTexto_(dataSesiones[i][17] || "Activa") === "revertida") continue;
 
-    var idLote = dataSesiones[i][11];
-    var pesoAsignado = numeroEnteroSeguro_(dataSesiones[i][9]) * numeroSeguro_(dataSesiones[i][10]);
-    if (idLote) {
-      lotesAReincorporar[idLote] = numeroSeguro_(lotesAReincorporar[idLote]) + pesoAsignado;
+    var tipoFuenteSesion = normalizarTexto_(dataSesiones[i][24] || (dataSesiones[i][11] ? "Fruta" : ""));
+    if (tipoFuenteSesion === "produccion") {
+      var idProduccionSesion = dataSesiones[i][25];
+      var categoriaSesion = normalizarTexto_(dataSesiones[i][27]) === "averia" ? "Averia" : "Funcional";
+      var claveProduccion = idProduccionSesion + "|" + categoriaSesion;
+      if (idProduccionSesion) {
+        produccionesAReincorporar[claveProduccion] = numeroEnteroSeguro_(produccionesAReincorporar[claveProduccion]) + numeroEnteroSeguro_(dataSesiones[i][29]);
+      }
+    } else {
+      var idLote = dataSesiones[i][11];
+      var pesoAsignado = numeroEnteroSeguro_(dataSesiones[i][9]) * numeroSeguro_(dataSesiones[i][10]);
+      if (idLote) {
+        lotesAReincorporar[idLote] = numeroSeguro_(lotesAReincorporar[idLote]) + pesoAsignado;
+      }
     }
 
     sheetSesiones.getRange(i + 1, 18, 1, 3).setValues([[
@@ -1328,11 +1613,36 @@ function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
   Object.keys(lotesAReincorporar).forEach(function(idLote) {
     reincorporarLoteEmpaque_(ss, idLote, lotesAReincorporar[idLote]);
     lotesLiberados.push({
+      tipoFuente: "Fruta",
       idLote: idLote,
       pesoReincorporadoLb: lotesAReincorporar[idLote]
     });
   });
+  Object.keys(produccionesAReincorporar).forEach(function(clave) {
+    var partes = clave.split("|");
+    reincorporarProduccionEmpaque_(ss, partes[0], partes[1], produccionesAReincorporar[clave]);
+    lotesLiberados.push({
+      tipoFuente: "Produccion",
+      idProduccion: partes[0],
+      categoriaUnidades: partes[1],
+      unidadesReincorporadas: produccionesAReincorporar[clave]
+    });
+  });
   return lotesLiberados;
+}
+
+function reincorporarProduccionEmpaque_(ss, idProduccion, categoria, unidades) {
+  var sheetProduccion = ss.getSheetByName("Produccion_Areas");
+  if (!sheetProduccion) return;
+  var filaProduccion = buscarFilaPorColumna_(sheetProduccion, 1, idProduccion);
+  if (filaProduccion === -1) return;
+  var esAveria = normalizarTexto_(categoria) === "averia";
+  var columnaOriginal = esAveria ? 13 : 12;
+  var columnaDisponible = esAveria ? 16 : 15;
+  var original = numeroEnteroSeguro_(sheetProduccion.getRange(filaProduccion, columnaOriginal).getValue());
+  var disponible = numeroEnteroSeguro_(sheetProduccion.getRange(filaProduccion, columnaDisponible).getValue());
+  sheetProduccion.getRange(filaProduccion, columnaDisponible).setValue(Math.min(original, disponible + numeroEnteroSeguro_(unidades)));
+  actualizarEstadoDisponibilidadProduccion_(sheetProduccion, filaProduccion);
 }
 
 function reincorporarLoteEmpaque_(ss, idLote, pesoReincorporado) {
@@ -1490,6 +1800,21 @@ function crearIdSesionEmpaque_(ss) {
     if (!idExisteEnLibro_(ss, id)) return id;
   }
 
+  return base + "-" + new Date().getTime();
+}
+
+function crearCodigoProduccion_(ss, area) {
+  var fechaObj = new Date();
+  var dd = ("0" + fechaObj.getDate()).slice(-2);
+  var mm = ("0" + (fechaObj.getMonth() + 1)).slice(-2);
+  var prefijo = normalizarAreaOperativa_(area) === "Tamales" ? "TAM" : "PLA";
+  var base = prefijo + "-" + dd + mm;
+  var sheetProduccion = ss.getSheetByName("Produccion_Areas");
+  for (var intento = 1; intento <= 999; intento++) {
+    var consecutivo = ("00" + intento).slice(-3);
+    var id = base + "-" + consecutivo;
+    if (buscarFilaPorColumna_(sheetProduccion, 2, id) === -1) return id;
+  }
   return base + "-" + new Date().getTime();
 }
 

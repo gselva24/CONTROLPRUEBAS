@@ -25,6 +25,7 @@ function element() {
         classList: classList(),
         className: "",
         innerHTML: "",
+        textContent: "",
         value: "",
         appendChild(child) { this.children.push(child); }
     };
@@ -41,6 +42,9 @@ const context = vm.createContext({
 [
     "js/state.js",
     "js/modules/frutas.js",
+    "js/modules/produccion.js",
+    "js/modules/planchas.js",
+    "js/modules/tamales.js",
     "js/modules/empaque.js",
     "js/modules/pedidos.js",
     "js/modules/historial.js"
@@ -63,11 +67,42 @@ vm.runInContext(`
 
 assert.match(elements["f-pedido-parcial-select"].innerHTML, /0107-PR-001 - Nance - Lote de prueba \(Pausado\)/);
 
+elements["ta-cliente-select"] = element();
+elements["ta-producto-select"] = element();
+elements["ta-producto-info"] = element();
+elements["ta-funcionales"] = element();
+elements["ta-averia"] = element();
+elements["ta-total"] = element();
+elements["ta-reportes"] = element();
+
+vm.runInContext(`
+    clientesCatalog = [{ idCliente: "CLI-UUID", codigo: "CLI", nombre: "Cliente Prueba", visibleApp: "SI" }];
+    productosCatalog = [
+        { idProducto: "PROD-TAMAL", nombreBase: "Tamal Pisque", presentacion: "12x4x6.35 oz.", area: "Tamales", visibleApp: "SI" },
+        { idProducto: "PROD-PLANCHA", nombreBase: "Rigua", presentacion: "30x5", area: "Planchas", visibleApp: "SI" }
+    ];
+    productosClienteCatalog = [
+        { idProductoCliente: "SKU-TAMAL", idCliente: "CLI-UUID", idProducto: "PROD-TAMAL", nombreComercial: "TAMAL PISQUE 12x4", visibleApp: "SI" },
+        { idProductoCliente: "SKU-PLANCHA", idCliente: "CLI-UUID", idProducto: "PROD-PLANCHA", nombreComercial: "RIGUA CON QUESO", visibleApp: "SI" }
+    ];
+    renderTamales();
+`, context);
+
+elements["ta-cliente-select"].value = "CLI-UUID";
+vm.runInContext("actualizarProductosTamales();", context);
+assert.match(elements["ta-producto-select"].innerHTML, /TAMAL PISQUE/);
+assert.doesNotMatch(elements["ta-producto-select"].innerHTML, /RIGUA CON QUESO/);
+elements["ta-funcionales"].value = "1900";
+elements["ta-averia"].value = "100";
+vm.runInContext("actualizarTotalTamales();", context);
+assert.equal(elements["ta-total"].textContent, "2,000");
+
 elements["e-pedido-cliente-select"] = element();
 elements["e-pedido-cliente-select"].value = "CLI-0107-001";
 elements["e-detalle-pedido-select"] = element();
 elements["e-detalle-pedido-select"].value = "LIN-001";
 elements["e-lote-fruta-select"] = element();
+elements["e-fuente-label"] = element();
 
 vm.runInContext(`
     detallePedidosCliente = [
@@ -101,6 +136,29 @@ assert.match(elements["e-lote-fruta-select"].innerHTML, /L-NANCE/);
 assert.doesNotMatch(elements["e-lote-fruta-select"].innerHTML, /L-MAMEY/);
 elements["e-detalle-pedido-select"].value = "LIN-002";
 assert.equal(vm.runInContext("buscarDetalleEmpaqueSeleccionado().idLinea", context), "LIN-002");
+
+vm.runInContext(`
+    pedidosCliente = [{ idPedido: "CLI-0107-001", idCliente: "CLI-UUID", cliente: "Cliente Prueba", visibleApp: "SI", estadoPedido: "Abierto" }];
+    detallePedidosCliente = [{
+        idPedido: "CLI-0107-001",
+        idLinea: "LIN-TAMAL",
+        idProducto: "PROD-TAMAL",
+        area: "Tamales",
+        producto: "TAMAL PISQUE 12x4",
+        estadoDetalle: "Pendiente",
+        visibleApp: "SI"
+    }];
+    produccionesAreas = [
+        { idProduccion: "PROD-1", codigoProduccion: "TAM-0107-001", idCliente: "CLI-UUID", idProducto: "PROD-TAMAL", producto: "TAMAL PISQUE 12x4", funcionalesDisponibles: 1900, averiaDisponible: 100, visibleApp: "SI" },
+        { idProduccion: "PROD-2", codigoProduccion: "TAM-0107-002", idCliente: "OTRO", idProducto: "PROD-TAMAL", producto: "TAMAL PISQUE 12x4", funcionalesDisponibles: 500, averiaDisponible: 25, visibleApp: "SI" }
+    ];
+`, context);
+elements["e-pedido-cliente-select"].value = "CLI-0107-001";
+elements["e-detalle-pedido-select"].value = "LIN-TAMAL";
+vm.runInContext("renderEmpaqueLoteSelect();", context);
+assert.match(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-001 - TAMAL PISQUE 12x4 - Funcionales/);
+assert.doesNotMatch(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-002 - TAMAL PISQUE 12x4 - Funcionales/);
+assert.match(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-002 - TAMAL PISQUE 12x4 - Avería/);
 
 elements["p-cliente-select"] = element();
 elements["p-cliente-select"].value = "CLI-UUID";
