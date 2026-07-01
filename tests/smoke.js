@@ -202,6 +202,18 @@ assert.equal(lineaCatalogo.productoBaseProduccion, "Nance");
 assert.equal(lineaCatalogo.cantidadPedida, 12);
 assert.equal(lineaCatalogo.unidad, "cajas");
 
+elements["p-producto-area"] = element();
+elements["p-producto-base-wrapper"] = element();
+elements["p-producto-base-produccion"] = element();
+elements["p-producto-area"].value = "Empaque";
+vm.runInContext("actualizarCampoBaseProduccionProducto();", context);
+assert.equal(elements["p-producto-base-wrapper"].classList.contains("hidden"), false);
+elements["p-producto-base-produccion"].value = "Nance";
+elements["p-producto-area"].value = "Tamales";
+vm.runInContext("actualizarCampoBaseProduccionProducto();", context);
+assert.equal(elements["p-producto-base-wrapper"].classList.contains("hidden"), true);
+assert.equal(elements["p-producto-base-produccion"].value, "");
+
 elements["cards-container"] = element();
 
 vm.runInContext(`

@@ -213,6 +213,21 @@ assert.match(sheets.Detalle_Pedido_Cliente.valueAt(2, 11), /^uuid-/);
 assert.match(sheets.Pedidos_Fruta.valueAt(2, 16), /^uuid-/);
 assert.equal(sheets.Asignaciones_Pedido.getLastRow(), 3);
 
+const productAreaResponse = vm.runInContext(`doPost({
+    postData: {
+        contents: JSON.stringify({
+            action: "guardarProductoGeneral",
+            nombreBase: "Rigua con queso",
+            presentacion: "30x5x3.2 oz.",
+            area: "Planchas",
+            productoBaseProduccion: "Nance"
+        })
+    }
+})`, context);
+const productAreaData = JSON.parse(productAreaResponse.text);
+assert.equal(productAreaData.status, "success");
+assert.equal(sheets.Productos.valueAt(2, 5), "Rigua con queso");
+
 const firstResult = vm.runInContext(
     'revertirAsignacionesPedidoCliente_(SpreadsheetApp.getActiveSpreadsheet(), "P1", "Pedido cancelado")',
     context

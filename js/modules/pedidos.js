@@ -186,10 +186,15 @@ function renderClientesProductosSelect() {
 function renderProductosAdmin() {
     const generalSelect = document.getElementById('p-producto-general-select');
     const list = document.getElementById('p-productos-list');
-    const baseOptions = document.getElementById('p-productos-base-options');
-    if (!generalSelect || !list || !baseOptions) return;
+    const baseSelect = document.getElementById('p-producto-base-produccion');
+    if (!generalSelect || !list || !baseSelect) return;
 
-    baseOptions.innerHTML = frutasCatalog.map(fruta => `<option value="${fruta}"></option>`).join("");
+    const baseActual = baseSelect.value;
+    baseSelect.innerHTML = '<option value="">-- Seleccionar fruta base --</option>';
+    frutasCatalog.forEach(fruta => {
+        baseSelect.innerHTML += `<option value="${fruta}">${fruta}</option>`;
+    });
+    if (frutasCatalog.includes(baseActual)) baseSelect.value = baseActual;
     generalSelect.innerHTML = '<option value="">-- Seleccionar producto general --</option>';
     const activos = productosCatalog
         .filter(p => p.visibleApp !== "NO")
@@ -205,13 +210,24 @@ function renderProductosAdmin() {
                 <div class="min-w-0">
                     <span class="block font-black text-slate-100">${producto.nombreBase}</span>
                     <span class="block text-[10px] text-slate-400">${producto.presentacion} · ${producto.area}</span>
-                    ${producto.productoBaseProduccion ? `<span class="block text-[9px] text-slate-500">Base: ${producto.productoBaseProduccion}</span>` : ""}
+                    ${normalizarTextoFront(producto.area) === "empaque" && producto.productoBaseProduccion ? `<span class="block text-[9px] text-slate-500">Fruta: ${producto.productoBaseProduccion}</span>` : ""}
                 </div>
                 <button onclick="ocultarProductoGeneral('${producto.idProducto}')" class="text-rose-300 text-[10px] font-black uppercase">Ocultar</button>
             </div>`;
     });
+    actualizarCampoBaseProduccionProducto();
     renderClientesProductosSelect();
     renderProductosClienteList();
+}
+
+function actualizarCampoBaseProduccionProducto() {
+    const area = document.getElementById('p-producto-area');
+    const wrapper = document.getElementById('p-producto-base-wrapper');
+    const base = document.getElementById('p-producto-base-produccion');
+    if (!area || !wrapper || !base) return;
+    const esEmpaque = normalizarTextoFront(area.value) === "empaque";
+    wrapper.classList.toggle("hidden", !esEmpaque);
+    if (!esEmpaque) base.value = "";
 }
 
 function renderProductosClienteList() {
@@ -241,12 +257,15 @@ function agregarProductoGeneral() {
     const nombreBase = document.getElementById('p-producto-base-nombre').value.trim();
     const presentacion = document.getElementById('p-producto-presentacion').value.trim();
     const area = document.getElementById('p-producto-area').value.trim();
-    const productoBaseProduccion = document.getElementById('p-producto-base-produccion').value.trim();
+    const esEmpaque = normalizarTextoFront(area) === "empaque";
+    const productoBaseProduccion = esEmpaque
+        ? document.getElementById('p-producto-base-produccion').value.trim()
+        : nombreBase;
     if (!nombreBase || !presentacion || !area) {
         alert("Ingrese nombre base, presentación y área.");
         return;
     }
-    if (normalizarTextoFront(area) === "empaque" && !productoBaseProduccion) {
+    if (esEmpaque && !productoBaseProduccion) {
         alert("Para Empaque seleccione la fruta base de producción.");
         return;
     }
@@ -378,6 +397,7 @@ function limpiarFormularioCatalogo(mode) {
         document.getElementById('p-producto-area').value = "";
         document.getElementById('p-producto-base-produccion').value = "";
         document.getElementById('p-producto-nombre-comercial').value = "";
+        actualizarCampoBaseProduccionProducto();
     }
 }
 

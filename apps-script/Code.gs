@@ -407,6 +407,7 @@ function doPost(e) {
       if (normalizarTexto_(areaProducto) === "empaque" && (!baseProduccion || !frutaExisteEnCatalogo_(ss, baseProduccion))) {
         return json_(false, "Para Empaque seleccione una fruta valida como producto base de produccion.");
       }
+      if (normalizarTexto_(areaProducto) !== "empaque") baseProduccion = nombreBaseProducto;
 
       var productosPostData = sheetProductosPost.getDataRange().getValues();
       var filaProductoPost = -1;

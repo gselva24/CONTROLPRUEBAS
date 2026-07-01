@@ -418,15 +418,17 @@
                         <input type="text" id="p-producto-base-nombre" placeholder="Nombre base: Tamal dulce" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                         <div class="grid grid-cols-2 gap-3">
                             <input type="text" id="p-producto-presentacion" placeholder="Presentación: 12x15 oz." class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
-                            <input type="text" id="p-producto-area" list="p-areas-options" placeholder="Área: Empaque" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            <input type="text" id="p-producto-area" list="p-areas-options" oninput="actualizarCampoBaseProduccionProducto()" placeholder="Área: Empaque" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                         </div>
-                        <input type="text" id="p-producto-base-produccion" list="p-productos-base-options" placeholder="Producto base de producción: Nance" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                        <div id="p-producto-base-wrapper" class="hidden">
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Fruta base:</label>
+                            <select id="p-producto-base-produccion" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none"></select>
+                        </div>
                         <datalist id="p-areas-options">
                             <option value="Empaque"></option>
                             <option value="Planchas"></option>
                             <option value="Tamales"></option>
                         </datalist>
-                        <datalist id="p-productos-base-options"></datalist>
                         <button onclick="agregarProductoGeneral()" class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Guardar producto general</button>
                         <div id="p-productos-list" class="space-y-2 text-xs"></div>
                     </div>

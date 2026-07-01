@@ -35,7 +35,11 @@ Catalogo general de productos fisicos y sus presentaciones.
 | F | Visible_App |
 | G | Fecha_Creacion |
 
-Para productos del area `Empaque`, `Producto_Base_Produccion` debe coincidir con una fruta de `Opciones`. El peso por caja no se guarda todavia; Empaque mantiene su ingreso manual.
+Para productos del area `Empaque`, `Producto_Base_Produccion` se selecciona del
+catalogo de frutas y debe coincidir con una fruta de `Opciones`. Para Planchas,
+Tamales y cualquier otra area, el backend completa este campo con `Nombre_Base`;
+el gerente no necesita ingresarlo. El peso por caja no se guarda todavia;
+Empaque mantiene su ingreso manual.
 
 ## Productos_Cliente
 
@@ -209,6 +213,10 @@ La aplicacion usa estas filas para mostrar en Historial los pedidos en los que p
 | AD | Unidades_Consumidas |
 
 Para una linea del area `Empaque`, `Producto_Base_Produccion` debe coincidir con la fruta del lote seleccionado. El nombre comercial puede ser diferente para cada cliente.
+
+Para lineas de Planchas y Tamales, la coincidencia se realiza mediante
+`ID_Producto`. Por ello dos presentaciones del mismo nombre pueden permanecer
+separadas, y el nombre comercial del cliente no se utiliza como clave tecnica.
 
 `Estado_Registro` usa `Activa` o `Revertida`. Cuando se cancela o elimina un pedido, sus sesiones activas se marcan como revertidas, se registra la fecha y el motivo, y el peso asignado se reincorpora al lote sin borrar la trazabilidad original.
 

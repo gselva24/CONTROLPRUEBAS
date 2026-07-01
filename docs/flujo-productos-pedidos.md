@@ -11,6 +11,11 @@ El gerente registra una sola vez el producto fisico:
 
 Ejemplo: `Nance`, presentacion `12x15 oz.`, area `Empaque`, base de produccion `Nance`.
 
+La base de produccion solo se selecciona manualmente para `Empaque`, porque debe
+identificar la fruta de `Pedidos_Fruta`. En Planchas, Tamales y otras areas se
+guarda automaticamente el nombre base y las relaciones operativas usan
+`ID_Producto`.
+
 ## Nombre comercial por cliente
 
 El gerente selecciona un cliente y relaciona el producto general con el nombre que aparecera en sus pedidos.
