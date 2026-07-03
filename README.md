@@ -23,6 +23,7 @@ Aplicacion web para registrar y consultar operaciones de planta: frutas, empaque
 - `docs/estructura-google-sheets.md`: referencia de hojas y columnas esperadas.
 - `docs/flujo-productos-pedidos.md`: metodologia de productos, lineas y asignaciones.
 - `docs/pendientes-futuros.md`: decisiones funcionales reservadas para integraciones futuras.
+- `docs/configuracion-clasp.md`: sincronizacion segura entre el repositorio y Apps Script.
 
 ## Flujo de trabajo recomendado
 

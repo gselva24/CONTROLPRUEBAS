@@ -1,0 +1,15 @@
+{
+  "name": "mes-comercializadora-503",
+  "private": true,
+  "scripts": {
+    "clasp:login": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clasp.ps1 login",
+    "clasp:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clasp.ps1 status",
+    "clasp:pull": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clasp.ps1 pull",
+    "clasp:push": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clasp.ps1 push",
+    "clasp:versions": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clasp.ps1 versions",
+    "clasp:deployments": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clasp.ps1 deployments"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.3.0"
+  }
+}
