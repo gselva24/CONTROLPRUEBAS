@@ -220,7 +220,8 @@ const productAreaResponse = vm.runInContext(`doPost({
             nombreBase: "Rigua con queso",
             presentacion: "30x5x3.2 oz.",
             area: "Planchas",
-            productoBaseProduccion: "Nance"
+            productoBaseProduccion: "Nance",
+            unidadProduccion: "unidad"
         })
     }
 })`, context);
@@ -283,7 +284,7 @@ assert.equal(sheets.Asignaciones_Pedido.valueAt(4, 10), "Activa");
 
 const idClienteC1 = sheets.Clientes.valueAt(2, 4);
 sheets.Productos.appendRow([
-    "PROD-TAMAL", "Tamal Pisque", "12x4x6.35 oz.", "Tamales", "Tamal Pisque", "SI", "2026-07-01"
+    "PROD-TAMAL", "Tamal Pisque", "12x4x6.35 oz.", "Tamales", "Tamal Pisque", "SI", "2026-07-01", "unidad"
 ]);
 sheets.Productos_Cliente.appendRow([
     "SKU-TAMAL", idClienteC1, "C1", "PROD-TAMAL", "TAMAL PISQUE 12x4x6.35 oz.", "SI", "2026-07-01"
@@ -293,7 +294,7 @@ sheets.Pedidos_Cliente.appendRow([
 ]);
 sheets.Detalle_Pedido_Cliente.appendRow([
     "P3", "Tamales", "TAMAL PISQUE 12x4x6.35 oz.", "12x4x6.35 oz.", "cajas",
-    12, 0, "Pendiente", "SI", "", "LINE-P3", "PED-TECH-P3", "SKU-TAMAL", "PROD-TAMAL", "Tamal Pisque"
+    12, 0, "Pendiente", "SI", "", "LINE-P3", "PED-TECH-P3", "SKU-TAMAL", "PROD-DESTINO", "Tamal Pisque"
 ]);
 
 const productionResponse = vm.runInContext(`doPost({
@@ -328,9 +329,10 @@ const packingProductionResponse = vm.runInContext(`doPost({
             idPedidoCliente: "P3",
             idLinea: "LINE-P3",
             idProduccion: "${productionData.idProduccion}",
-            categoriaUnidades: "Funcional",
-            unidadesPorCaja: 48,
+            cantidadPorCaja: 48,
             cajas: 10,
+            estadoUsoLote: "Empacado Parcial",
+            sobranteFuente: 1520,
             responsable: "Supervisor Empaque",
             nota: "Primer empaque",
             fecha: "2026-07-01"
@@ -340,12 +342,18 @@ const packingProductionResponse = vm.runInContext(`doPost({
 const packingProductionData = JSON.parse(packingProductionResponse.text);
 
 assert.equal(packingProductionData.status, "success");
-assert.equal(packingProductionData.unidadesConsumidas, 480);
-assert.equal(sheets.Produccion_Areas.valueAt(2, 15), 1420);
+assert.equal(packingProductionData.cantidadConsumida, 480);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 22), 1520);
 assert.equal(sheets.Detalle_Pedido_Cliente.valueAt(4, 7), 10);
 assert.equal(sheets.Empaque_Sesiones.valueAt(5, 25), "Produccion");
-assert.equal(sheets.Empaque_Sesiones.valueAt(5, 28), "Funcional");
 assert.equal(sheets.Empaque_Sesiones.valueAt(5, 30), 480);
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 31), 48);
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 32), 2000);
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 33), 1520);
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 34), 480);
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 35), "unidad");
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 36), "PROD-TAMAL");
+assert.equal(sheets.Empaque_Sesiones.valueAt(5, 37), "PROD-DESTINO");
 
 const packingAveriaResponse = vm.runInContext(`doPost({
     postData: {
@@ -354,9 +362,10 @@ const packingAveriaResponse = vm.runInContext(`doPost({
             idPedidoCliente: "P3",
             idLinea: "LINE-P3",
             idProduccion: "${productionData.idProduccion}",
-            categoriaUnidades: "Averia",
-            unidadesPorCaja: 48,
+            cantidadPorCaja: 48,
             cajas: 2,
+            estadoUsoLote: "Empacado Parcial",
+            sobranteFuente: 1424,
             responsable: "Supervisor Empaque",
             nota: "Uso de averia",
             fecha: "2026-07-01"
@@ -366,7 +375,7 @@ const packingAveriaResponse = vm.runInContext(`doPost({
 const packingAveriaData = JSON.parse(packingAveriaResponse.text);
 
 assert.equal(packingAveriaData.status, "success");
-assert.equal(sheets.Produccion_Areas.valueAt(2, 16), 4);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 22), 1424);
 assert.equal(sheets.Detalle_Pedido_Cliente.valueAt(4, 7), 12);
 
 const productionReversal = vm.runInContext(
@@ -374,9 +383,10 @@ const productionReversal = vm.runInContext(
     context
 );
 
-assert.equal(productionReversal.length, 2);
+assert.equal(productionReversal.length, 1);
 assert.equal(sheets.Produccion_Areas.valueAt(2, 15), 1900);
 assert.equal(sheets.Produccion_Areas.valueAt(2, 16), 100);
+assert.equal(sheets.Produccion_Areas.valueAt(2, 22), 2000);
 assert.equal(sheets.Produccion_Areas.valueAt(2, 17), "Disponible");
 
 const getResponse = vm.runInContext("doGet({})", context);

@@ -38,7 +38,8 @@ function doGet(e) {
         area: productosData[pr][3],
         productoBaseProduccion: productosData[pr][4],
         visibleApp: productosData[pr][5] || "SI",
-        fechaCreacion: productosData[pr][6] || ""
+        fechaCreacion: productosData[pr][6] || "",
+        unidadProduccion: productosData[pr][7] || (normalizarTexto_(productosData[pr][3]) === "empaque" ? "lb" : "unidad")
       });
     }
   }
@@ -217,15 +218,19 @@ function doGet(e) {
         idProductoCliente: produccionData[pa][8],
         producto: produccionData[pa][9],
         presentacion: produccionData[pa][10],
-        unidadesFuncionales: numeroEnteroSeguro_(produccionData[pa][11]),
-        unidadesAveria: numeroEnteroSeguro_(produccionData[pa][12]),
-        totalFisico: numeroEnteroSeguro_(produccionData[pa][13]),
-        funcionalesDisponibles: numeroEnteroSeguro_(produccionData[pa][14]),
-        averiaDisponible: numeroEnteroSeguro_(produccionData[pa][15]),
+        unidadesFuncionales: numeroSeguro_(produccionData[pa][11]),
+        unidadesAveria: numeroSeguro_(produccionData[pa][12]),
+        totalFisico: numeroSeguro_(produccionData[pa][13]),
+        funcionalesDisponibles: numeroSeguro_(produccionData[pa][14]),
+        averiaDisponible: numeroSeguro_(produccionData[pa][15]),
         estadoDisponibilidad: produccionData[pa][16] || "Disponible",
         responsable: produccionData[pa][17] || "",
         nota: produccionData[pa][18] || "",
-        visibleApp: produccionData[pa][19] || "SI"
+        visibleApp: produccionData[pa][19] || "SI",
+        unidadMedida: produccionData[pa][20] || "unidad",
+        cantidadDisponible: produccionData[pa][21] !== "" && typeof produccionData[pa][21] !== "undefined"
+          ? numeroSeguro_(produccionData[pa][21])
+          : numeroSeguro_(produccionData[pa][14]) + numeroSeguro_(produccionData[pa][15])
       });
     }
   }
@@ -266,8 +271,15 @@ function doGet(e) {
         idProduccion: sesionesData[se][25] || "",
         codigoProduccion: sesionesData[se][26] || "",
         categoriaUnidades: sesionesData[se][27] || "",
-        unidadesPorCaja: numeroEnteroSeguro_(sesionesData[se][28]),
-        unidadesConsumidas: numeroEnteroSeguro_(sesionesData[se][29])
+        unidadesPorCaja: numeroSeguro_(sesionesData[se][28]),
+        unidadesConsumidas: numeroSeguro_(sesionesData[se][29]),
+        cantidadPorCaja: numeroSeguro_(sesionesData[se][30] || sesionesData[se][28] || sesionesData[se][10]),
+        cantidadFuenteAnterior: numeroSeguro_(sesionesData[se][31]),
+        cantidadFuenteSobrante: numeroSeguro_(sesionesData[se][32]),
+        cantidadFuenteConsumida: numeroSeguro_(sesionesData[se][33] || sesionesData[se][29]),
+        unidadFuente: sesionesData[se][34] || (sesionesData[se][11] ? "lb" : "unidad"),
+        idProductoFuente: sesionesData[se][35] || "",
+        idProductoDestino: sesionesData[se][36] || ""
       });
     }
   }
@@ -291,7 +303,11 @@ function doGet(e) {
         fechaReversion: asignacionesData[ap][10] || "",
         motivoReversion: asignacionesData[ap][11] || "",
         idPedidoVisible: asignacionesData[ap][12] || "",
-        idLoteVisible: asignacionesData[ap][13] || ""
+        idLoteVisible: asignacionesData[ap][13] || "",
+        cantidadFuenteConsumida: numeroSeguro_(asignacionesData[ap][14]),
+        unidadFuente: asignacionesData[ap][15] || "",
+        idProductoFuente: asignacionesData[ap][16] || "",
+        idProductoDestino: asignacionesData[ap][17] || ""
       });
     }
   }
@@ -398,35 +414,49 @@ function doPost(e) {
     }
 
     if (params.action === "guardarProductoGeneral") {
-      var sheetProductosPost = getOrCreateSheet_(ss, "Productos", ["ID_Producto", "Nombre_Base", "Presentacion", "Area_Responsable", "Producto_Base_Produccion", "Visible_App", "Fecha_Creacion"]);
+      var sheetProductosPost = getOrCreateSheet_(ss, "Productos", ["ID_Producto", "Nombre_Base", "Presentacion", "Area_Responsable", "Producto_Base_Produccion", "Visible_App", "Fecha_Creacion", "Unidad_Produccion"]);
       var nombreBaseProducto = (params.nombreBase || "").toString().trim();
       var presentacionProducto = (params.presentacion || "").toString().trim();
-      var areaProducto = (params.area || "").toString().trim();
+      var areaProducto = normalizarAreaOperativa_(params.area);
       var baseProduccion = (params.productoBaseProduccion || "").toString().trim();
+      var unidadProduccionProducto = (params.unidadProduccion || "").toString().trim();
+      var idProductoEditar = (params.idProducto || "").toString().trim();
       if (!nombreBaseProducto || !presentacionProducto || !areaProducto) return json_(false, "Ingrese nombre base, presentacion y area.");
       if (normalizarTexto_(areaProducto) === "empaque" && (!baseProduccion || !frutaExisteEnCatalogo_(ss, baseProduccion))) {
         return json_(false, "Para Empaque seleccione una fruta valida como producto base de produccion.");
       }
-      if (normalizarTexto_(areaProducto) !== "empaque") baseProduccion = nombreBaseProducto;
+      if (normalizarTexto_(areaProducto) === "empaque") {
+        unidadProduccionProducto = "lb";
+      } else {
+        baseProduccion = nombreBaseProducto;
+        if (!unidadProduccionProducto) return json_(false, "Seleccione la unidad de produccion.");
+      }
 
       var productosPostData = sheetProductosPost.getDataRange().getValues();
-      var filaProductoPost = -1;
+      var filaProductoPost = idProductoEditar ? buscarFilaPorColumna_(sheetProductosPost, 1, idProductoEditar) : -1;
+      if (idProductoEditar && filaProductoPost === -1) return json_(false, "No se encontro el producto que desea editar.");
       for (var pg = 1; pg < productosPostData.length; pg++) {
         if (
           normalizarTexto_(productosPostData[pg][1]) === normalizarTexto_(nombreBaseProducto) &&
           normalizarTexto_(productosPostData[pg][2]) === normalizarTexto_(presentacionProducto) &&
           normalizarTexto_(productosPostData[pg][3]) === normalizarTexto_(areaProducto)
         ) {
-          filaProductoPost = pg + 1;
-          break;
+          if (idProductoEditar && pg + 1 !== filaProductoPost) {
+            return json_(false, "Ya existe otro producto con el mismo nombre, presentacion y area.");
+          }
+          if (!idProductoEditar && filaProductoPost === -1) {
+            filaProductoPost = pg + 1;
+            break;
+          }
         }
       }
 
       var idProductoPost = filaProductoPost === -1 ? crearUuid_() : sheetProductosPost.getRange(filaProductoPost, 1).getValue();
       if (filaProductoPost === -1) {
-        sheetProductosPost.appendRow([idProductoPost, nombreBaseProducto, presentacionProducto, areaProducto, baseProduccion, "SI", new Date()]);
+        sheetProductosPost.appendRow([idProductoPost, nombreBaseProducto, presentacionProducto, areaProducto, baseProduccion, "SI", new Date(), unidadProduccionProducto]);
       } else {
         sheetProductosPost.getRange(filaProductoPost, 2, 1, 5).setValues([[nombreBaseProducto, presentacionProducto, areaProducto, baseProduccion, "SI"]]);
+        sheetProductosPost.getRange(filaProductoPost, 8).setValue(unidadProduccionProducto);
       }
       return ContentService.createTextOutput(JSON.stringify({status: "success", idProducto: idProductoPost})).setMimeType(ContentService.MimeType.JSON);
     }
@@ -591,7 +621,7 @@ function doPost(e) {
 
     // -- OPERATIVO: REPORTES DE PRODUCCION DE PLANCHAS Y TAMALES --
     if (params.action === "registroProduccionArea") {
-      var headersProduccion = ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App"];
+      var headersProduccion = ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App", "Unidad_Medida", "Cantidad_Disponible"];
       var sheetProduccionPost = getOrCreateSheet_(ss, "Produccion_Areas", headersProduccion);
       var sheetClientesProduccion = ss.getSheetByName("Clientes");
       var sheetProductosProduccion = ss.getSheetByName("Productos");
@@ -599,14 +629,13 @@ function doPost(e) {
       var areaProduccion = normalizarAreaOperativa_(params.area);
       var unidadesFuncionalesIngresadas = numeroSeguro_(params.unidadesFuncionales);
       var unidadesAveriaIngresadas = numeroSeguro_(params.unidadesAveria);
-      var unidadesFuncionales = numeroEnteroSeguro_(params.unidadesFuncionales);
-      var unidadesAveria = numeroEnteroSeguro_(params.unidadesAveria);
+      var unidadesFuncionales = unidadesFuncionalesIngresadas;
+      var unidadesAveria = unidadesAveriaIngresadas;
       var responsableProduccion = (params.responsable || "").toString().trim();
 
       if (areaProduccion !== "Planchas" && areaProduccion !== "Tamales") return json_(false, "Seleccione un area de produccion valida.");
-      if (unidadesFuncionalesIngresadas !== unidadesFuncionales || unidadesAveriaIngresadas !== unidadesAveria) return json_(false, "Las cantidades de produccion deben ser numeros enteros.");
       if (unidadesFuncionales <= 0) return json_(false, "Las unidades funcionales deben ser mayores a cero.");
-      if (numeroSeguro_(params.unidadesAveria) < 0) return json_(false, "La averia no puede ser negativa.");
+      if (unidadesAveria < 0) return json_(false, "La averia no puede ser negativa.");
       if (!responsableProduccion) return json_(false, "Ingrese el responsable del reporte.");
 
       var filaClienteProduccion = buscarFilaPorColumna_(sheetClientesProduccion, 4, params.idCliente);
@@ -632,6 +661,7 @@ function doPost(e) {
       var clienteProduccion = sheetClientesProduccion.getRange(filaClienteProduccion, 2).getValue();
       var productoProduccion = sheetProductosClienteProduccion.getRange(filaRelacionProduccion, 5).getValue();
       var presentacionProduccion = sheetProductosProduccion.getRange(filaProductoProduccion, 3).getValue();
+      var unidadMedidaProduccion = sheetProductosProduccion.getRange(filaProductoProduccion, 8).getValue() || "unidad";
       var totalFisicoProduccion = unidadesFuncionales + unidadesAveria;
       sheetProduccionPost.appendRow([
         idProduccion,
@@ -653,7 +683,9 @@ function doPost(e) {
         "Disponible",
         responsableProduccion,
         params.nota || "",
-        "SI"
+        "SI",
+        unidadMedidaProduccion,
+        totalFisicoProduccion
       ]);
       return ContentService.createTextOutput(JSON.stringify({
         status: "success",
@@ -757,8 +789,8 @@ function doPost(e) {
     }
     // -- OPERATIVO: REGISTRO DE EMPAQUE --
     if (params.action === "registroEmpaquePedido") {
-      var sheetEmpaqueSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico"]);
-      var sheetAsignacionesEmpaque = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible"]);
+      var sheetEmpaqueSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"]);
+      var sheetAsignacionesEmpaque = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"]);
       var sheetDetallePedido = ss.getSheetByName("Detalle_Pedido_Cliente");
       var sheetPedidoCliente = ss.getSheetByName("Pedidos_Cliente");
       var sheetFrutaEmpaque = ss.getSheetByName("Pedidos_Fruta");
@@ -831,8 +863,10 @@ function doPost(e) {
       sheetDetallePedido.getRange(filaDetallePedido, 8).setValue(estadoDetalle);
 
       var estadoUsoLote = params.estadoUsoLote === "Empacado Parcial" ? "Empacado Parcial" : "Empacado Total";
+      var nuevoDisponibleFruta = estadoUsoLote === "Empacado Total" ? 0 : sobranteLote;
+      var cantidadConsumidaFruta = Math.max(0, disponibleActual - nuevoDisponibleFruta);
       sheetFrutaEmpaque.getRange(filaLoteEmpaque, 13).setValue(estadoUsoLote);
-      sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).setValue(estadoUsoLote === "Empacado Total" ? 0 : sobranteLote);
+      sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).setValue(nuevoDisponibleFruta);
 
       var idSesionEmpaque = crearIdSesionEmpaque_(ss);
       var idLineaGuardado = sheetDetallePedido.getRange(filaDetallePedido, 11).getValue() || crearUuid_();
@@ -867,7 +901,20 @@ function doPost(e) {
         idLineaGuardado,
         idAsignacionEmpaque,
         idLoteTecnicoGuardado,
-        idPedidoTecnicoGuardado
+        idPedidoTecnicoGuardado,
+        "Fruta",
+        "",
+        "",
+        "",
+        0,
+        0,
+        presentacionLb,
+        disponibleActual,
+        nuevoDisponibleFruta,
+        cantidadConsumidaFruta,
+        "lb",
+        "",
+        sheetDetallePedido.getRange(filaDetallePedido, 14).getValue() || ""
       ]);
       sheetAsignacionesEmpaque.appendRow([
         idAsignacionEmpaque,
@@ -883,7 +930,11 @@ function doPost(e) {
         "",
         "",
         params.idPedidoCliente,
-        params.idLoteFruta
+        params.idLoteFruta,
+        cantidadConsumidaFruta,
+        "lb",
+        "",
+        sheetDetallePedido.getRange(filaDetallePedido, 14).getValue() || ""
       ]);
 
       var dataEmpaqueNueva = sheetEmpaqueSalidas.getDataRange().getValues();
@@ -910,22 +961,22 @@ function doPost(e) {
     }
 
     if (params.action === "registroEmpaqueProduccion") {
-      var headersSesionesProduccion = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas"];
+      var headersSesionesProduccion = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"];
       var sheetSesionesProduccion = getOrCreateSheet_(ss, "Empaque_Sesiones", headersSesionesProduccion);
-      var sheetAsignacionesProduccion = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible"]);
+      var sheetAsignacionesProduccion = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"]);
       var sheetDetalleProduccion = ss.getSheetByName("Detalle_Pedido_Cliente");
       var sheetPedidoProduccion = ss.getSheetByName("Pedidos_Cliente");
       var sheetFuenteProduccion = ss.getSheetByName("Produccion_Areas");
       if (!sheetDetalleProduccion || !sheetPedidoProduccion || !sheetFuenteProduccion) return json_(false, "Faltan hojas de pedidos o produccion.");
 
       var cajasProduccion = numeroEnteroSeguro_(params.cajas);
-      var unidadesPorCaja = numeroEnteroSeguro_(params.unidadesPorCaja);
-      var unidadesConsumidas = cajasProduccion * unidadesPorCaja;
-      var categoriaProduccion = normalizarTexto_(params.categoriaUnidades) === "averia" ? "Averia" : "Funcional";
+      var cantidadPorCajaProduccion = numeroSeguro_(params.cantidadPorCaja || params.unidadesPorCaja);
+      var sobranteFuenteProduccion = numeroSeguro_(params.sobranteFuente);
+      var usoParcialProduccion = normalizarTexto_(params.estadoUsoLote).indexOf("parcial") !== -1;
       if (!params.idPedidoCliente || !params.idLinea) return json_(false, "Seleccione pedido y linea.");
       if (!params.idProduccion) return json_(false, "Seleccione una produccion disponible.");
-      if (numeroSeguro_(params.cajas) !== cajasProduccion || numeroSeguro_(params.unidadesPorCaja) !== unidadesPorCaja) return json_(false, "Cajas y unidades por caja deben ser numeros enteros.");
-      if (cajasProduccion <= 0 || unidadesPorCaja <= 0) return json_(false, "Ingrese cajas y unidades por caja validas.");
+      if (numeroSeguro_(params.cajas) !== cajasProduccion) return json_(false, "Las cajas deben ser un numero entero.");
+      if (cajasProduccion <= 0 || cantidadPorCajaProduccion <= 0) return json_(false, "Ingrese cajas y contenido por caja validos.");
 
       var filaDetalleProduccion = buscarFilaPorColumna_(sheetDetalleProduccion, 11, params.idLinea);
       var filaPedidoProduccion = buscarFilaPorId_(sheetPedidoProduccion, params.idPedidoCliente);
@@ -952,25 +1003,25 @@ function doPost(e) {
         return json_(false, "El pedido o la linea ya no acepta registros.");
       }
 
-      var idProductoDetalleProduccion = sheetDetalleProduccion.getRange(filaDetalleProduccion, 14).getValue();
-      var idProductoFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 8).getValue();
-      if (!idProductoDetalleProduccion || idProductoDetalleProduccion != idProductoFuenteProduccion) {
-        return json_(false, "La produccion no corresponde al producto solicitado.");
+      var areaDetalleProduccion = normalizarAreaOperativa_(sheetDetalleProduccion.getRange(filaDetalleProduccion, 2).getValue());
+      var areaFuenteProduccion = normalizarAreaOperativa_(sheetFuenteProduccion.getRange(filaFuenteProduccion, 4).getValue());
+      if (areaDetalleProduccion !== areaFuenteProduccion) {
+        return json_(false, "La produccion seleccionada no corresponde al area de la linea.");
       }
+      var idProductoFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 8).getValue();
+      var idProductoDetalleProduccion = sheetDetalleProduccion.getRange(filaDetalleProduccion, 14).getValue();
       if (normalizarTexto_(sheetFuenteProduccion.getRange(filaFuenteProduccion, 20).getValue()) === "no") {
         return json_(false, "La produccion seleccionada esta oculta.");
       }
 
-      var idClientePedidoProduccion = sheetPedidoProduccion.getRange(filaPedidoProduccion, 10).getValue();
-      var idClienteFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 5).getValue();
-      if (categoriaProduccion === "Funcional" && idClientePedidoProduccion != idClienteFuenteProduccion) {
-        return json_(false, "Las unidades funcionales fueron producidas para otro cliente.");
-      }
-
-      var columnaDisponibleProduccion = categoriaProduccion === "Averia" ? 16 : 15;
-      var disponibleProduccion = numeroEnteroSeguro_(sheetFuenteProduccion.getRange(filaFuenteProduccion, columnaDisponibleProduccion).getValue());
-      if (unidadesConsumidas > disponibleProduccion) {
-        return json_(false, "La produccion seleccionada no tiene suficientes unidades disponibles.");
+      var unidadFuenteProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 21).getValue() || "unidad";
+      var disponibleGuardadoProduccion = sheetFuenteProduccion.getRange(filaFuenteProduccion, 22).getValue();
+      var disponibleProduccion = disponibleGuardadoProduccion !== "" && typeof disponibleGuardadoProduccion !== "undefined"
+        ? numeroSeguro_(disponibleGuardadoProduccion)
+        : numeroSeguro_(sheetFuenteProduccion.getRange(filaFuenteProduccion, 15).getValue()) + numeroSeguro_(sheetFuenteProduccion.getRange(filaFuenteProduccion, 16).getValue());
+      if (disponibleProduccion <= 0) return json_(false, "La produccion seleccionada ya no tiene cantidad disponible.");
+      if (usoParcialProduccion && (sobranteFuenteProduccion <= 0 || sobranteFuenteProduccion >= disponibleProduccion)) {
+        return json_(false, "El sobrante debe ser mayor a cero y menor a la cantidad disponible.");
       }
 
       var pedidaProduccion = numeroEnteroSeguro_(sheetDetalleProduccion.getRange(filaDetalleProduccion, 6).getValue());
@@ -979,8 +1030,11 @@ function doPost(e) {
         return json_(false, "Las cajas ingresadas exceden la cantidad pendiente de la linea.");
       }
 
-      var nuevoDisponibleProduccion = disponibleProduccion - unidadesConsumidas;
-      sheetFuenteProduccion.getRange(filaFuenteProduccion, columnaDisponibleProduccion).setValue(nuevoDisponibleProduccion);
+      var nuevoDisponibleProduccion = usoParcialProduccion ? sobranteFuenteProduccion : 0;
+      var cantidadConsumidaProduccion = disponibleProduccion - nuevoDisponibleProduccion;
+      if (cantidadConsumidaProduccion <= 0) return json_(false, "La cantidad consumida debe ser mayor a cero.");
+      sheetFuenteProduccion.getRange(filaFuenteProduccion, 21).setValue(unidadFuenteProduccion);
+      sheetFuenteProduccion.getRange(filaFuenteProduccion, 22).setValue(nuevoDisponibleProduccion);
       actualizarEstadoDisponibilidadProduccion_(sheetFuenteProduccion, filaFuenteProduccion);
 
       var completadaProduccion = completadaAnteriorProduccion + cajasProduccion;
@@ -1020,9 +1074,16 @@ function doPost(e) {
         "Produccion",
         params.idProduccion,
         codigoFuenteProduccion,
-        categoriaProduccion,
-        unidadesPorCaja,
-        unidadesConsumidas
+        "",
+        cantidadPorCajaProduccion,
+        cantidadConsumidaProduccion,
+        cantidadPorCajaProduccion,
+        disponibleProduccion,
+        nuevoDisponibleProduccion,
+        cantidadConsumidaProduccion,
+        unidadFuenteProduccion,
+        idProductoFuenteProduccion,
+        idProductoDetalleProduccion
       ]);
       sheetAsignacionesProduccion.appendRow([
         idAsignacionProduccion,
@@ -1038,14 +1099,19 @@ function doPost(e) {
         "",
         "",
         params.idPedidoCliente,
-        codigoFuenteProduccion
+        codigoFuenteProduccion,
+        cantidadConsumidaProduccion,
+        unidadFuenteProduccion,
+        idProductoFuenteProduccion,
+        idProductoDetalleProduccion
       ]);
 
       recalcularEstadoPedidoCliente_(ss, params.idPedidoCliente);
       return ContentService.createTextOutput(JSON.stringify({
         status: "success",
         idSesionEmpaque: idSesionProduccionEmpaque,
-        unidadesConsumidas: unidadesConsumidas
+        cantidadConsumida: cantidadConsumidaProduccion,
+        unidadFuente: unidadFuenteProduccion
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1213,7 +1279,7 @@ function migrarEstructuraTecnica() {
 
 function asegurarEstructuraTecnica_(ss, forzar) {
   var properties = PropertiesService.getScriptProperties();
-  var clave = "MIGRACION_TECNICA_V3_" + ss.getId();
+  var clave = "MIGRACION_TECNICA_V4_" + ss.getId();
   if (!forzar && properties.getProperty(clave) === "OK") return;
 
   var sheetClientes = getOrCreateSheet_(ss, "Clientes", ["Codigo_Cliente", "Nombre_Cliente", "Visible_App", "ID_Cliente"]);
@@ -1224,8 +1290,13 @@ function asegurarEstructuraTecnica_(ss, forzar) {
     if (clientesData[c][0]) clienteIdPorCodigo[clientesData[c][0].toString()] = clientesData[c][3];
   }
 
-  var sheetProductos = getOrCreateSheet_(ss, "Productos", ["ID_Producto", "Nombre_Base", "Presentacion", "Area_Responsable", "Producto_Base_Produccion", "Visible_App", "Fecha_Creacion"]);
+  var sheetProductos = getOrCreateSheet_(ss, "Productos", ["ID_Producto", "Nombre_Base", "Presentacion", "Area_Responsable", "Producto_Base_Produccion", "Visible_App", "Fecha_Creacion", "Unidad_Produccion"]);
   completarIdsTecnicos_(sheetProductos, 1, 2);
+  var productosData = sheetProductos.getDataRange().getValues();
+  for (var prod = 1; prod < productosData.length; prod++) {
+    if (!productosData[prod][0] || productosData[prod][7]) continue;
+    sheetProductos.getRange(prod + 1, 8).setValue(normalizarTexto_(productosData[prod][3]) === "empaque" ? "lb" : "unidad");
+  }
   var sheetProductosCliente = getOrCreateSheet_(ss, "Productos_Cliente", ["ID_Producto_Cliente", "ID_Cliente", "Codigo_Cliente", "ID_Producto", "Nombre_Comercial", "Visible_App", "Fecha_Creacion"]);
   completarIdsTecnicos_(sheetProductosCliente, 1, 5);
   var productosClienteData = sheetProductosCliente.getDataRange().getValues();
@@ -1281,16 +1352,38 @@ function asegurarEstructuraTecnica_(ss, forzar) {
   var sheetMovimientos = getOrCreateSheet_(ss, "Movimientos_Bodega", ["Fecha", "Tipo_Movimiento", "ID", "Producto", "Categoria", "Unidad", "Cantidad", "Stock_Anterior", "Stock_Nuevo", "Responsable", "Nota", "ID_Movimiento"]);
   completarIdsTecnicos_(sheetMovimientos, 12, 1);
 
-  getOrCreateSheet_(ss, "Produccion_Areas", ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App"]);
+  var sheetProduccion = getOrCreateSheet_(ss, "Produccion_Areas", ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App", "Unidad_Medida", "Cantidad_Disponible"]);
+  var produccionData = sheetProduccion.getDataRange().getValues();
+  var unidadProductoPorId = {};
+  var produccionTecnicaPorId = {};
+  var productosActualizados = sheetProductos.getDataRange().getValues();
+  for (var pu = 1; pu < productosActualizados.length; pu++) {
+    if (productosActualizados[pu][0]) unidadProductoPorId[productosActualizados[pu][0]] = productosActualizados[pu][7] || "unidad";
+  }
+  for (var prd = 1; prd < produccionData.length; prd++) {
+    if (!produccionData[prd][0]) continue;
+    var unidadProduccionMigrada = produccionData[prd][20] || unidadProductoPorId[produccionData[prd][7]] || "unidad";
+    if (!produccionData[prd][20]) {
+      sheetProduccion.getRange(prd + 1, 21).setValue(unidadProduccionMigrada);
+    }
+    if (produccionData[prd][21] === "" || typeof produccionData[prd][21] === "undefined") {
+      var disponibleMigrado = numeroSeguro_(produccionData[prd][14]) + numeroSeguro_(produccionData[prd][15]);
+      sheetProduccion.getRange(prd + 1, 22).setValue(disponibleMigrado);
+    }
+    produccionTecnicaPorId[produccionData[prd][0]] = {
+      unidad: unidadProduccionMigrada,
+      idProducto: produccionData[prd][7] || ""
+    };
+  }
 
-  var headersSesiones = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas"];
+  var headersSesiones = ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"];
   var sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", headersSesiones);
 
-  var sheetAsignaciones = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible"]);
+  var sheetAsignaciones = getOrCreateSheet_(ss, "Asignaciones_Pedido", ["ID_Asignacion", "Fecha", "ID_Pedido_Tecnico", "ID_Linea", "ID_Lote_Tecnico", "ID_Sesion", "Area", "Cantidad", "Unidad", "Estado_Asignacion", "Fecha_Reversion", "Motivo_Reversion", "ID_Pedido_Visible", "ID_Lote_Visible", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"]);
   var asignacionesData = sheetAsignaciones.getDataRange().getValues();
   var asignacionesExistentes = {};
   for (var a = 1; a < asignacionesData.length; a++) {
-    if (asignacionesData[a][0]) asignacionesExistentes[asignacionesData[a][0]] = true;
+    if (asignacionesData[a][0]) asignacionesExistentes[asignacionesData[a][0]] = a + 1;
   }
 
   var sesionesData = sheetSesiones.getDataRange().getValues();
@@ -1303,6 +1396,28 @@ function asegurarEstructuraTecnica_(ss, forzar) {
     var idLoteTecnico = sesionesData[s][22] || loteTecnicoPorVisible[sesionesData[s][11]] || "";
     var idPedidoTecnico = sesionesData[s][23] || pedidoTecnicoPorVisible[sesionesData[s][2]] || "";
     sheetSesiones.getRange(s + 1, 21, 1, 4).setValues([[idLinea, idAsignacion, idLoteTecnico, idPedidoTecnico]]);
+    var tipoFuenteMigrada = sesionesData[s][24] || (sesionesData[s][11] ? "Fruta" : (sesionesData[s][25] ? "Produccion" : ""));
+    var esProduccionMigrada = normalizarTexto_(tipoFuenteMigrada) === "produccion";
+    var produccionTecnica = produccionTecnicaPorId[sesionesData[s][25]] || {};
+    var cantidadPorCajaMigrada = numeroSeguro_(sesionesData[s][30] || sesionesData[s][28] || sesionesData[s][10]);
+    var cantidadConsumidaMigrada = numeroSeguro_(sesionesData[s][33] || sesionesData[s][29]);
+    if (!esProduccionMigrada && cantidadConsumidaMigrada <= 0) {
+      cantidadConsumidaMigrada = numeroEnteroSeguro_(sesionesData[s][9]) * numeroSeguro_(sesionesData[s][10]);
+    }
+    var cantidadSobranteMigrada = numeroSeguro_(sesionesData[s][32] || sesionesData[s][14]);
+    var unidadFuenteMigrada = sesionesData[s][34] || (esProduccionMigrada ? produccionTecnica.unidad || "unidad" : "lb");
+    var idProductoFuenteMigrado = sesionesData[s][35] || (esProduccionMigrada ? produccionTecnica.idProducto || "" : "");
+    var idProductoDestinoMigrado = sesionesData[s][36] || detalleSesion[13] || "";
+    sheetSesiones.getRange(s + 1, 25).setValue(tipoFuenteMigrada);
+    sheetSesiones.getRange(s + 1, 31, 1, 7).setValues([[
+      cantidadPorCajaMigrada,
+      sesionesData[s][31] || "",
+      cantidadSobranteMigrada,
+      cantidadConsumidaMigrada,
+      unidadFuenteMigrada,
+      idProductoFuenteMigrado,
+      idProductoDestinoMigrado
+    ]]);
 
     if (!asignacionesExistentes[idAsignacion]) {
       sheetAsignaciones.appendRow([
@@ -1319,9 +1434,20 @@ function asegurarEstructuraTecnica_(ss, forzar) {
         sesionesData[s][18] || "",
         sesionesData[s][19] || "",
         sesionesData[s][2],
-        sesionesData[s][11]
+        sesionesData[s][11] || sesionesData[s][26],
+        cantidadConsumidaMigrada,
+        unidadFuenteMigrada,
+        idProductoFuenteMigrado,
+        idProductoDestinoMigrado
       ]);
-      asignacionesExistentes[idAsignacion] = true;
+      asignacionesExistentes[idAsignacion] = sheetAsignaciones.getLastRow();
+    } else {
+      sheetAsignaciones.getRange(asignacionesExistentes[idAsignacion], 15, 1, 4).setValues([[
+        cantidadConsumidaMigrada,
+        unidadFuenteMigrada,
+        idProductoFuenteMigrado,
+        idProductoDestinoMigrado
+      ]]);
     }
   }
 
@@ -1368,10 +1494,16 @@ function getOrCreateSheet_(ss, nombre, headers) {
   var sheet = ss.getSheetByName(nombre);
   if (!sheet) {
     sheet = ss.insertSheet(nombre);
+    if (headers && typeof sheet.getMaxColumns === "function" && headers.length > sheet.getMaxColumns()) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+    }
     sheet.appendRow(headers);
     return sheet;
   }
 
+  if (headers && typeof sheet.getMaxColumns === "function" && headers.length > sheet.getMaxColumns()) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+  }
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
   } else if (headers && headers.length) {
@@ -1401,12 +1533,12 @@ function normalizarAreaOperativa_(valor) {
 
 function actualizarEstadoDisponibilidadProduccion_(sheet, fila) {
   if (!sheet || fila < 2) return;
-  var funcionalesOriginales = numeroEnteroSeguro_(sheet.getRange(fila, 12).getValue());
-  var averiaOriginal = numeroEnteroSeguro_(sheet.getRange(fila, 13).getValue());
-  var funcionalesDisponibles = numeroEnteroSeguro_(sheet.getRange(fila, 15).getValue());
-  var averiaDisponible = numeroEnteroSeguro_(sheet.getRange(fila, 16).getValue());
-  var original = funcionalesOriginales + averiaOriginal;
-  var disponible = funcionalesDisponibles + averiaDisponible;
+  var original = numeroSeguro_(sheet.getRange(fila, 14).getValue());
+  if (original <= 0) original = numeroSeguro_(sheet.getRange(fila, 12).getValue()) + numeroSeguro_(sheet.getRange(fila, 13).getValue());
+  var disponibleGuardado = sheet.getRange(fila, 22).getValue();
+  var disponible = disponibleGuardado !== "" && typeof disponibleGuardado !== "undefined"
+    ? numeroSeguro_(disponibleGuardado)
+    : numeroSeguro_(sheet.getRange(fila, 15).getValue()) + numeroSeguro_(sheet.getRange(fila, 16).getValue());
   var estado = "Disponible";
   if (disponible <= 0) estado = "Agotado";
   else if (disponible < original) estado = "Parcial";
@@ -1563,7 +1695,7 @@ function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
   if (!idPedido) return [];
   var sheetSesiones = ss.getSheetByName("Empaque_Sesiones");
   if (!sheetSesiones) return [];
-  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas"]);
+  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"]);
 
   var dataSesiones = sheetSesiones.getDataRange().getValues();
   var lotesAReincorporar = {};
@@ -1576,14 +1708,18 @@ function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
     var tipoFuenteSesion = normalizarTexto_(dataSesiones[i][24] || (dataSesiones[i][11] ? "Fruta" : ""));
     if (tipoFuenteSesion === "produccion") {
       var idProduccionSesion = dataSesiones[i][25];
-      var categoriaSesion = normalizarTexto_(dataSesiones[i][27]) === "averia" ? "Averia" : "Funcional";
-      var claveProduccion = idProduccionSesion + "|" + categoriaSesion;
+      var cantidadProduccionSesion = numeroSeguro_(dataSesiones[i][33] || dataSesiones[i][29]);
+      var unidadProduccionSesion = dataSesiones[i][34] || "unidad";
       if (idProduccionSesion) {
-        produccionesAReincorporar[claveProduccion] = numeroEnteroSeguro_(produccionesAReincorporar[claveProduccion]) + numeroEnteroSeguro_(dataSesiones[i][29]);
+        if (!produccionesAReincorporar[idProduccionSesion]) {
+          produccionesAReincorporar[idProduccionSesion] = { cantidad: 0, unidad: unidadProduccionSesion };
+        }
+        produccionesAReincorporar[idProduccionSesion].cantidad += cantidadProduccionSesion;
       }
     } else {
       var idLote = dataSesiones[i][11];
-      var pesoAsignado = numeroEnteroSeguro_(dataSesiones[i][9]) * numeroSeguro_(dataSesiones[i][10]);
+      var pesoAsignado = numeroSeguro_(dataSesiones[i][33]);
+      if (pesoAsignado <= 0) pesoAsignado = numeroEnteroSeguro_(dataSesiones[i][9]) * numeroSeguro_(dataSesiones[i][10]);
       if (idLote) {
         lotesAReincorporar[idLote] = numeroSeguro_(lotesAReincorporar[idLote]) + pesoAsignado;
       }
@@ -1619,30 +1755,32 @@ function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
       pesoReincorporadoLb: lotesAReincorporar[idLote]
     });
   });
-  Object.keys(produccionesAReincorporar).forEach(function(clave) {
-    var partes = clave.split("|");
-    reincorporarProduccionEmpaque_(ss, partes[0], partes[1], produccionesAReincorporar[clave]);
+  Object.keys(produccionesAReincorporar).forEach(function(idProduccion) {
+    var reincorporacion = produccionesAReincorporar[idProduccion];
+    reincorporarProduccionEmpaque_(ss, idProduccion, reincorporacion.cantidad);
     lotesLiberados.push({
       tipoFuente: "Produccion",
-      idProduccion: partes[0],
-      categoriaUnidades: partes[1],
-      unidadesReincorporadas: produccionesAReincorporar[clave]
+      idProduccion: idProduccion,
+      cantidadReincorporada: reincorporacion.cantidad,
+      unidad: reincorporacion.unidad,
+      unidadesReincorporadas: reincorporacion.unidad === "unidad" ? reincorporacion.cantidad : 0
     });
   });
   return lotesLiberados;
 }
 
-function reincorporarProduccionEmpaque_(ss, idProduccion, categoria, unidades) {
+function reincorporarProduccionEmpaque_(ss, idProduccion, cantidad) {
   var sheetProduccion = ss.getSheetByName("Produccion_Areas");
   if (!sheetProduccion) return;
   var filaProduccion = buscarFilaPorColumna_(sheetProduccion, 1, idProduccion);
   if (filaProduccion === -1) return;
-  var esAveria = normalizarTexto_(categoria) === "averia";
-  var columnaOriginal = esAveria ? 13 : 12;
-  var columnaDisponible = esAveria ? 16 : 15;
-  var original = numeroEnteroSeguro_(sheetProduccion.getRange(filaProduccion, columnaOriginal).getValue());
-  var disponible = numeroEnteroSeguro_(sheetProduccion.getRange(filaProduccion, columnaDisponible).getValue());
-  sheetProduccion.getRange(filaProduccion, columnaDisponible).setValue(Math.min(original, disponible + numeroEnteroSeguro_(unidades)));
+  var original = numeroSeguro_(sheetProduccion.getRange(filaProduccion, 14).getValue());
+  if (original <= 0) original = numeroSeguro_(sheetProduccion.getRange(filaProduccion, 12).getValue()) + numeroSeguro_(sheetProduccion.getRange(filaProduccion, 13).getValue());
+  var disponibleGuardado = sheetProduccion.getRange(filaProduccion, 22).getValue();
+  var disponible = disponibleGuardado !== "" && typeof disponibleGuardado !== "undefined"
+    ? numeroSeguro_(disponibleGuardado)
+    : numeroSeguro_(sheetProduccion.getRange(filaProduccion, 15).getValue()) + numeroSeguro_(sheetProduccion.getRange(filaProduccion, 16).getValue());
+  sheetProduccion.getRange(filaProduccion, 22).setValue(Math.min(original, disponible + numeroSeguro_(cantidad)));
   actualizarEstadoDisponibilidadProduccion_(sheetProduccion, filaProduccion);
 }
 

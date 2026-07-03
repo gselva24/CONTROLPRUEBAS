@@ -21,6 +21,13 @@ function sesionesDeLote(idLote) {
     );
 }
 
+function sesionesDeProduccion(idProduccion) {
+    return empaqueSesiones.filter(s =>
+        s.idProduccion === idProduccion &&
+        normalizarTextoFront(s.estadoRegistro || "Activa") !== "revertida"
+    );
+}
+
 function renderMobileHistory() {
     const container = document.getElementById('cards-container');
     if (!container) return;
@@ -28,10 +35,7 @@ function renderMobileHistory() {
     const filtrado = historialCompleto.filter(i => i.visibleApp === "SI");
     if (filtrado.length === 0) {
         container.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No hay lotes activos.</p>';
-        return;
-    }
-
-    [...filtrado].reverse().forEach(p => {
+    } else [...filtrado].reverse().forEach(p => {
         const frutaEstilos = (p.estadoFrutas === "Proceso Completo" || p.estadoFrutas === "Finalizado")
             ? { bg: "bg-emerald-950/40", border: "border-emerald-700/50", text: "text-emerald-400", lightText: "text-emerald-200" }
             : { bg: "bg-amber-950/40", border: "border-amber-700/50", text: "text-amber-400", lightText: "text-amber-200" };
@@ -106,4 +110,84 @@ function renderMobileHistory() {
             </div>`;
         container.appendChild(card);
     });
+
+    renderHistorialProduccion("Planchas", "planchas-history-container");
+    renderHistorialProduccion("Tamales", "tamales-history-container");
+}
+
+function renderHistorialProduccion(area, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const reportes = produccionesAreas
+        .filter(item => item.visibleApp !== "NO" && normalizarAreaProduccion(item.area) === normalizarAreaProduccion(area))
+        .slice()
+        .reverse();
+
+    if (!reportes.length) {
+        container.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No hay lotes registrados.</p>';
+        return;
+    }
+
+    container.innerHTML = reportes.map(item => {
+        const unidad = item.unidadMedida || "unidad";
+        const disponible = cantidadDisponibleProduccion(item);
+        const sesiones = sesionesDeProduccion(item.idProduccion);
+        const usoHtml = sesiones.length
+            ? [...sesiones].reverse().map(sesion => `
+                <div class="bg-slate-950/60 border border-slate-700/70 rounded-lg p-2.5">
+                    <div class="flex justify-between gap-3">
+                        <span class="font-mono font-bold text-emerald-300">${sesion.idPedido}</span>
+                        <span class="font-bold text-slate-300">${numeroHistorial(sesion.cajasHechas, 0)} cajas</span>
+                    </div>
+                    <p class="mt-1 text-[10px] text-slate-300">${sesion.producto} · ${sesion.presentacion || "Sin presentación"}</p>
+                    <p class="mt-1 text-[10px] text-slate-400">
+                        Consumido: ${numeroHistorial(sesion.cantidadFuenteConsumida || sesion.unidadesConsumidas, 2)} ${sesion.unidadFuente || unidad}
+                        · Sobrante: ${numeroHistorial(sesion.cantidadFuenteSobrante, 2)} ${sesion.unidadFuente || unidad}
+                    </p>
+                    <p class="mt-1 text-[9px] text-slate-500">${fechaHistorial(sesion.fecha)} · ${sesion.responsable || "Sin responsable"}</p>
+                </div>`).join("")
+            : '<p class="text-[10px] text-slate-500 py-1">Este lote todavía no se ha utilizado en Empaque.</p>';
+
+        const estadoColor = disponible <= 0
+            ? "text-rose-300 border-rose-700/50 bg-rose-950/30"
+            : disponible < Number(item.totalFisico || 0)
+                ? "text-amber-300 border-amber-700/50 bg-amber-950/30"
+                : "text-emerald-300 border-emerald-700/50 bg-emerald-950/30";
+
+        return `
+            <article class="bg-slate-800 p-4 rounded-xl border border-slate-700/70 shadow-xl text-xs space-y-3">
+                <div class="flex justify-between gap-3 border-b border-slate-700 pb-2">
+                    <span class="font-mono bg-slate-900 px-2 py-0.5 rounded text-sky-300 font-bold">${item.codigoProduccion}</span>
+                    <span class="font-black text-slate-300 uppercase">${item.area}</span>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-slate-100 break-words">${item.producto}</h4>
+                    <p class="text-[10px] text-slate-400 mt-0.5">${item.cliente} · ${fechaHistorial(item.fecha)}</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-lg">
+                        <span class="block text-[9px] uppercase font-black text-sky-300">Funcional</span>
+                        <strong class="text-sm">${numeroHistorial(item.unidadesFuncionales, 2)}</strong>
+                    </div>
+                    <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-lg">
+                        <span class="block text-[9px] uppercase font-black text-amber-300">Avería</span>
+                        <strong class="text-sm">${numeroHistorial(item.unidadesAveria, 2)}</strong>
+                    </div>
+                    <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-lg">
+                        <span class="block text-[9px] uppercase font-black text-slate-400">Unidad</span>
+                        <strong class="text-sm">${unidad}</strong>
+                    </div>
+                </div>
+                <div class="border p-3 rounded-lg ${estadoColor}">
+                    <div class="flex items-end justify-between gap-3">
+                        <span class="text-[9px] uppercase font-black">Disponible para Empaque</span>
+                        <strong class="text-lg">${numeroHistorial(disponible, 2)} ${unidad}</strong>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="text-[9px] font-black uppercase text-slate-400">Uso del lote</h4>
+                    ${usoHtml}
+                </div>
+            </article>`;
+    }).join("");
 }

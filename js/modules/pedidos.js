@@ -1,6 +1,8 @@
 let pedidoLineasForm = [];
 let pedidoDetalleExpandido = "";
 let pedidoClienteLineasId = "";
+let productosAdminExpandidos = false;
+let productoEditandoId = "";
 
 function formatearFechaCargaPedido(valor) {
     if (!valor) return "Sin fecha";
@@ -96,14 +98,21 @@ function renderProductosPedidoSelect() {
     const select = document.getElementById('p-linea-producto-cliente');
     if (!select) return;
     const cliente = buscarClienteSeleccionado(document.getElementById('p-cliente-select').value);
+    const areaSeleccionada = document.getElementById('p-linea-area')?.value || "";
     const valorActual = select.value;
-    select.innerHTML = '<option value="">-- Seleccionar producto --</option>';
-    if (cliente) {
+    select.innerHTML = areaSeleccionada
+        ? '<option value="">-- Seleccionar producto --</option>'
+        : '<option value="">-- Seleccione primero el módulo --</option>';
+    if (cliente && areaSeleccionada) {
         productosClienteCatalog
             .filter(rel => rel.idCliente === cliente.idCliente && rel.visibleApp !== "NO")
             .filter(rel => {
                 const producto = productoGeneralPorId(rel.idProducto);
-                return producto && producto.visibleApp !== "NO";
+                return (
+                    producto &&
+                    producto.visibleApp !== "NO" &&
+                    normalizarAreaProduccion(producto.area) === normalizarAreaProduccion(areaSeleccionada)
+                );
             })
             .sort((a, b) => a.nombreComercial.localeCompare(b.nombreComercial))
             .forEach(rel => {
@@ -127,7 +136,8 @@ function actualizarInfoProductoPedido() {
         <span class="block font-black text-emerald-300">${relacion.nombreComercial}</span>
         <span class="text-slate-400">${producto.nombreBase} · ${producto.presentacion}</span><br>
         <span class="text-slate-500">Área:</span> ${producto.area}
-        ${producto.productoBaseProduccion ? `<br><span class="text-slate-500">Base de producción:</span> ${producto.productoBaseProduccion}` : ""}`;
+        ${normalizarTextoFront(producto.area) !== "empaque" ? `<br><span class="text-slate-500">Unidad del lote:</span> ${producto.unidadProduccion || "unidad"}` : ""}
+        ${normalizarTextoFront(producto.area) === "empaque" && producto.productoBaseProduccion ? `<br><span class="text-slate-500">Fruta base:</span> ${producto.productoBaseProduccion}` : ""}`;
     info.classList.remove('hidden');
 }
 
@@ -187,6 +197,7 @@ function renderProductosAdmin() {
     const generalSelect = document.getElementById('p-producto-general-select');
     const list = document.getElementById('p-productos-list');
     const baseSelect = document.getElementById('p-producto-base-produccion');
+    const toggleBtn = document.getElementById('p-productos-toggle-btn');
     if (!generalSelect || !list || !baseSelect) return;
 
     const baseActual = baseSelect.value;
@@ -203,18 +214,27 @@ function renderProductosAdmin() {
         generalSelect.innerHTML += `<option value="${producto.idProducto}">${producto.nombreBase} · ${producto.presentacion}</option>`;
     });
 
-    list.innerHTML = activos.length ? "" : '<p class="text-center text-slate-500 py-2">No hay productos generales.</p>';
-    activos.forEach(producto => {
-        list.innerHTML += `
-            <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-lg p-3">
-                <div class="min-w-0">
-                    <span class="block font-black text-slate-100">${producto.nombreBase}</span>
-                    <span class="block text-[10px] text-slate-400">${producto.presentacion} · ${producto.area}</span>
-                    ${normalizarTextoFront(producto.area) === "empaque" && producto.productoBaseProduccion ? `<span class="block text-[9px] text-slate-500">Fruta: ${producto.productoBaseProduccion}</span>` : ""}
-                </div>
-                <button onclick="ocultarProductoGeneral('${producto.idProducto}')" class="text-rose-300 text-[10px] font-black uppercase">Ocultar</button>
-            </div>`;
-    });
+    list.classList.toggle("hidden", !productosAdminExpandidos);
+    if (toggleBtn) toggleBtn.textContent = productosAdminExpandidos ? "Ocultar productos configurados" : "Ver productos configurados";
+    list.innerHTML = "";
+    if (productosAdminExpandidos) {
+        list.innerHTML = activos.length ? "" : '<p class="text-center text-slate-500 py-2">No hay productos generales.</p>';
+        activos.forEach(producto => {
+            list.innerHTML += `
+                <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-lg p-3">
+                    <div class="min-w-0">
+                        <span class="block font-black text-slate-100">${producto.nombreBase}</span>
+                        <span class="block text-[10px] text-slate-400">${producto.presentacion} · ${producto.area}</span>
+                        ${normalizarTextoFront(producto.area) === "empaque" && producto.productoBaseProduccion ? `<span class="block text-[9px] text-slate-500">Fruta: ${producto.productoBaseProduccion}</span>` : ""}
+                        ${normalizarTextoFront(producto.area) !== "empaque" ? `<span class="block text-[9px] text-slate-500">Unidad: ${producto.unidadProduccion || "unidad"}</span>` : ""}
+                    </div>
+                    <div class="flex shrink-0 items-center gap-3">
+                        <button onclick="editarProductoGeneral('${producto.idProducto}')" class="text-cyan-300 text-[10px] font-black uppercase">Editar</button>
+                        <button onclick="ocultarProductoGeneral('${producto.idProducto}')" class="text-rose-300 text-[10px] font-black uppercase">Ocultar</button>
+                    </div>
+                </div>`;
+        });
+    }
     actualizarCampoBaseProduccionProducto();
     renderClientesProductosSelect();
     renderProductosClienteList();
@@ -224,10 +244,57 @@ function actualizarCampoBaseProduccionProducto() {
     const area = document.getElementById('p-producto-area');
     const wrapper = document.getElementById('p-producto-base-wrapper');
     const base = document.getElementById('p-producto-base-produccion');
-    if (!area || !wrapper || !base) return;
+    const unidadWrapper = document.getElementById('p-producto-unidad-wrapper');
+    const unidad = document.getElementById('p-producto-unidad');
+    if (!area || !wrapper || !base || !unidadWrapper || !unidad) return;
     const esEmpaque = normalizarTextoFront(area.value) === "empaque";
     wrapper.classList.toggle("hidden", !esEmpaque);
-    if (!esEmpaque) base.value = "";
+    unidadWrapper.classList.toggle("hidden", esEmpaque || !area.value);
+    if (!esEmpaque) {
+        base.value = "";
+        if (area.value && (!unidad.value || unidad.value === "lb")) unidad.value = "unidad";
+    }
+    if (esEmpaque) unidad.value = "lb";
+}
+
+function toggleProductosAdmin() {
+    productosAdminExpandidos = !productosAdminExpandidos;
+    renderProductosAdmin();
+}
+
+function editarProductoGeneral(idProducto) {
+    if (!isAdmin) { alert("Active modo gerente."); return; }
+    const producto = productoGeneralPorId(idProducto);
+    if (!producto) return;
+    productoEditandoId = idProducto;
+    document.getElementById('p-producto-base-nombre').value = producto.nombreBase || "";
+    document.getElementById('p-producto-presentacion').value = producto.presentacion || "";
+    document.getElementById('p-producto-area').value = normalizarAreaOperativaFront(producto.area);
+    document.getElementById('p-producto-base-produccion').value = producto.productoBaseProduccion || "";
+    document.getElementById('p-producto-guardar-btn').textContent = "Actualizar producto";
+    document.getElementById('p-producto-cancelar-btn').classList.remove("hidden");
+    actualizarCampoBaseProduccionProducto();
+    document.getElementById('p-producto-unidad').value = producto.unidadProduccion || "unidad";
+}
+
+function normalizarAreaOperativaFront(area) {
+    const normalizada = normalizarAreaProduccion(area);
+    if (normalizada === "planchas") return "Planchas";
+    if (normalizada === "tamales") return "Tamales";
+    if (normalizada === "empaque") return "Empaque";
+    return area || "";
+}
+
+function cancelarEdicionProducto() {
+    productoEditandoId = "";
+    document.getElementById('p-producto-base-nombre').value = "";
+    document.getElementById('p-producto-presentacion').value = "";
+    document.getElementById('p-producto-area').value = "";
+    document.getElementById('p-producto-base-produccion').value = "";
+    document.getElementById('p-producto-unidad').value = "";
+    document.getElementById('p-producto-guardar-btn').textContent = "Guardar producto";
+    document.getElementById('p-producto-cancelar-btn').classList.add("hidden");
+    actualizarCampoBaseProduccionProducto();
 }
 
 function renderProductosClienteList() {
@@ -258,6 +325,7 @@ function agregarProductoGeneral() {
     const presentacion = document.getElementById('p-producto-presentacion').value.trim();
     const area = document.getElementById('p-producto-area').value.trim();
     const esEmpaque = normalizarTextoFront(area) === "empaque";
+    const unidadProduccion = esEmpaque ? "lb" : document.getElementById('p-producto-unidad').value.trim();
     const productoBaseProduccion = esEmpaque
         ? document.getElementById('p-producto-base-produccion').value.trim()
         : nombreBase;
@@ -269,13 +337,19 @@ function agregarProductoGeneral() {
         alert("Para Empaque seleccione la fruta base de producción.");
         return;
     }
+    if (!esEmpaque && !unidadProduccion) {
+        alert("Seleccione la unidad usada para reportar la producción.");
+        return;
+    }
     postPedidos({
         action: "guardarProductoGeneral",
+        idProducto: productoEditandoId,
         nombreBase,
         presentacion,
         area,
-        productoBaseProduccion
-    }, "Producto general guardado.", "productos");
+        productoBaseProduccion,
+        unidadProduccion
+    }, productoEditandoId ? "Producto actualizado." : "Producto general guardado.", "productos");
 }
 
 function asignarProductoCliente() {
@@ -308,13 +382,22 @@ function ocultarProductoCliente(idProductoCliente) {
 }
 
 function agregarLineaPedido() {
+    const areaSeleccionada = document.getElementById('p-linea-area').value;
     const idProductoCliente = document.getElementById('p-linea-producto-cliente').value;
     const relacion = productoClientePorId(idProductoCliente);
     const productoGeneral = relacion ? productoGeneralPorId(relacion.idProducto) : null;
     const cantidad = Math.floor(Number(document.getElementById('p-linea-cantidad').value));
 
+    if (!areaSeleccionada) {
+        alert("Seleccione el módulo responsable.");
+        return;
+    }
     if (!relacion || !productoGeneral || !cantidad || cantidad <= 0) {
         alert("Seleccione producto e ingrese una cantidad válida de cajas.");
+        return;
+    }
+    if (normalizarAreaProduccion(productoGeneral.area) !== normalizarAreaProduccion(areaSeleccionada)) {
+        alert("El producto no corresponde al módulo seleccionado.");
         return;
     }
 
@@ -362,6 +445,7 @@ function resetPedidoForm() {
     document.getElementById('p-fecha-carga').value = "";
     document.getElementById('p-nota').value = "";
     document.getElementById('p-linea-producto-cliente').value = "";
+    document.getElementById('p-linea-area').value = "";
     document.getElementById('p-linea-cantidad').value = "";
     pedidoLineasForm = [];
     pedidoClienteLineasId = "";
@@ -392,12 +476,8 @@ function limpiarFormularioCatalogo(mode) {
         document.getElementById('p-cliente-nombre-nuevo').value = "";
     }
     if (mode === "productos") {
-        document.getElementById('p-producto-base-nombre').value = "";
-        document.getElementById('p-producto-presentacion').value = "";
-        document.getElementById('p-producto-area').value = "";
-        document.getElementById('p-producto-base-produccion').value = "";
+        cancelarEdicionProducto();
         document.getElementById('p-producto-nombre-comercial').value = "";
-        actualizarCampoBaseProduccionProducto();
     }
 }
 
@@ -416,10 +496,14 @@ function postPedidos(payload, successMessage, modeAfter = "lista") {
             let mensaje = successMessage;
             if (payload.action === "cancelarPedidoCliente" && Array.isArray(resData.lotesLiberados)) {
                 const pesoLiberado = resData.lotesLiberados.reduce((total, lote) => total + Number(lote.pesoReincorporadoLb || 0), 0);
-                const unidadesLiberadas = resData.lotesLiberados.reduce((total, lote) => total + Number(lote.unidadesReincorporadas || 0), 0);
                 const partes = [];
                 if (pesoLiberado > 0) partes.push(`${pesoLiberado.toLocaleString('es-GT', { maximumFractionDigits: 2 })} lb`);
-                if (unidadesLiberadas > 0) partes.push(`${unidadesLiberadas.toLocaleString('es-GT')} unidades`);
+                resData.lotesLiberados
+                    .filter(lote => lote.tipoFuente === "Produccion" && Number(lote.cantidadReincorporada || lote.unidadesReincorporadas || 0) > 0)
+                    .forEach(lote => {
+                        const cantidad = Number(lote.cantidadReincorporada || lote.unidadesReincorporadas || 0);
+                        partes.push(`${cantidad.toLocaleString('es-GT', { maximumFractionDigits: 2 })} ${lote.unidad || "unidad"}`);
+                    });
                 if (partes.length) mensaje += ` Se reincorporaron ${partes.join(" y ")} a sus fuentes.`;
             }
             alert(mensaje);

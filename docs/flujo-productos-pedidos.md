@@ -7,14 +7,15 @@ El gerente registra una sola vez el producto fisico:
 - nombre base;
 - presentacion;
 - area responsable;
-- producto base de produccion.
+- producto base de produccion, si pertenece a Empaque;
+- unidad de produccion, si pertenece a Planchas o Tamales.
 
 Ejemplo: `Nance`, presentacion `12x15 oz.`, area `Empaque`, base de produccion `Nance`.
 
 La base de produccion solo se selecciona manualmente para `Empaque`, porque debe
 identificar la fruta de `Pedidos_Fruta`. En Planchas, Tamales y otras areas se
-guarda automaticamente el nombre base y las relaciones operativas usan
-`ID_Producto`.
+guarda automaticamente el nombre base. La unidad (`unidad`, `oz fl`, `lb`,
+etc.) acompana el lote desde el reporte hasta su uso en Empaque.
 
 ## Nombre comercial por cliente
 
@@ -25,10 +26,11 @@ Un mismo producto puede llamarse de forma diferente para clientes distintos. La 
 ## Creacion del pedido
 
 1. Seleccionar cliente.
-2. Seleccionar uno de sus productos configurados.
-3. Revisar presentacion, area y producto base mostrados por la aplicacion.
-4. Ingresar cantidad de cajas.
-5. Agregar todas las lineas necesarias y guardar.
+2. Seleccionar el modulo responsable: Empaque, Tamales o Planchas.
+3. Seleccionar uno de los productos configurados para ese cliente y modulo.
+4. Revisar presentacion, area y producto base mostrados por la aplicacion.
+5. Ingresar cantidad de cajas.
+6. Agregar todas las lineas necesarias y guardar.
 
 La aplicacion copia los datos del catalogo a la linea y genera `ID_Linea`.
 
@@ -50,24 +52,31 @@ La linea permanece disponible hasta completar la cantidad de cajas pedida, por l
 Los supervisores reportan la produccion terminada una sola vez. El reporte
 selecciona cliente y producto, pero no selecciona pedido ni actualiza su avance.
 
-Cada reporte separa:
+Cada reporte conserva:
 
-- unidades funcionales destinadas al cliente;
-- unidades de averia reutilizable;
+- cantidad funcional reportada;
+- cantidad de averia;
 - total fisico producido.
 
-El sistema genera automaticamente el identificador y codigo de produccion. Las
-unidades funcionales solo pueden utilizarse para pedidos del cliente
-destinatario. La averia puede utilizarse en pedidos futuros de cualquier cliente
-cuando coincide el mismo `ID_Producto`.
+El sistema genera automaticamente el identificador y codigo de produccion. El
+reporte se convierte en un lote con `Unidad_Medida` y `Cantidad_Disponible`.
 
-Empaque selecciona la linea del pedido y consume unidades de uno o varios
-reportes. La cantidad consumida se calcula como:
+Empaque selecciona la linea del pedido. Si la linea pertenece a Tamales, muestra
+todos los lotes disponibles de Tamales; si pertenece a Planchas, muestra todos
+los de Planchas. No se bloquea por cliente ni por nombre de producto: el
+supervisor decide la relacion operativa y el sistema guarda los identificadores
+de fuente y destino.
 
-`Cajas_Hechas * Unidades_Por_Caja`
+En cada sesion se registra:
 
-Hasta incorporar el dato definitivo al catalogo, Empaque ingresa manualmente
-`Unidades_Por_Caja`. Solo el registro de Empaque incrementa
+- presentacion o contenido por caja;
+- cajas hechas;
+- uso total o parcial del lote;
+- cantidad sobrante declarada y unidad;
+- responsable y nota.
+
+La cantidad consumida real es `Cantidad_Fuente_Anterior -
+Cantidad_Fuente_Sobrante`. Solo el registro de Empaque incrementa
 `Cantidad_Completada` en la linea del pedido.
 
 ## Compatibilidad

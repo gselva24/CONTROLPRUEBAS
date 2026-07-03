@@ -34,12 +34,17 @@ Catalogo general de productos fisicos y sus presentaciones.
 | E | Producto_Base_Produccion |
 | F | Visible_App |
 | G | Fecha_Creacion |
+| H | Unidad_Produccion |
 
 Para productos del area `Empaque`, `Producto_Base_Produccion` se selecciona del
 catalogo de frutas y debe coincidir con una fruta de `Opciones`. Para Planchas,
 Tamales y cualquier otra area, el backend completa este campo con `Nombre_Base`;
-el gerente no necesita ingresarlo. El peso por caja no se guarda todavia;
-Empaque mantiene su ingreso manual.
+el gerente no necesita ingresarlo.
+
+`Unidad_Produccion` define la unidad con la que se reporta y descuenta el lote:
+por ejemplo `unidad`, `lb`, `oz fl`, `kg` o `litro`. Los productos de Empaque
+usan `lb` porque su fuente directa son los lotes de frutas. El contenido por
+caja continua siendo declarado por el supervisor de Empaque en cada sesion.
 
 ## Productos_Cliente
 
@@ -211,12 +216,21 @@ La aplicacion usa estas filas para mostrar en Historial los pedidos en los que p
 | AB | Categoria_Unidades |
 | AC | Unidades_Por_Caja |
 | AD | Unidades_Consumidas |
+| AE | Cantidad_Por_Caja |
+| AF | Cantidad_Fuente_Anterior |
+| AG | Cantidad_Fuente_Sobrante |
+| AH | Cantidad_Fuente_Consumida |
+| AI | Unidad_Fuente |
+| AJ | ID_Producto_Fuente |
+| AK | ID_Producto_Destino |
 
 Para una linea del area `Empaque`, `Producto_Base_Produccion` debe coincidir con la fruta del lote seleccionado. El nombre comercial puede ser diferente para cada cliente.
 
-Para lineas de Planchas y Tamales, la coincidencia se realiza mediante
-`ID_Producto`. Por ello dos presentaciones del mismo nombre pueden permanecer
-separadas, y el nombre comercial del cliente no se utiliza como clave tecnica.
+Para lineas de Planchas y Tamales, Empaque muestra todos los lotes disponibles
+del area responsable. No exige coincidencia de cliente, nombre comercial ni
+`ID_Producto`: el supervisor elige la fuente y la linea de destino. La relacion
+queda auditada mediante `ID_Produccion`, `ID_Linea`, `ID_Producto_Fuente` e
+`ID_Producto_Destino`.
 
 `Estado_Registro` usa `Activa` o `Revertida`. Cuando se cancela o elimina un pedido, sus sesiones activas se marcan como revertidas, se registra la fecha y el motivo, y el peso asignado se reincorpora al lote sin borrar la trazabilidad original.
 
@@ -224,9 +238,15 @@ El peso reincorporado se calcula como `Cajas_Hechas * Presentacion_Lb` y nunca p
 
 Los modulos futuros que asignen otros productos a pedidos deben guardar un registro de asignacion con estado activo/revertido y agregar su adaptador de reincorporacion dentro de `revertirAsignacionesPedidoCliente_`. Actualmente Empaque admite lotes de `Pedidos_Fruta` y reportes de `Produccion_Areas`.
 
-`Tipo_Fuente` distingue `Fruta` y `Produccion`. Para una fuente de produccion,
-`Categoria_Unidades` usa `Funcional` o `Averia`. Al cancelar un pedido, las
-unidades consumidas se reincorporan a la misma categoria del reporte de origen.
+`Tipo_Fuente` distingue `Fruta` y `Produccion`. Las columnas `Categoria_Unidades`,
+`Unidades_Por_Caja` y `Unidades_Consumidas` se conservan por compatibilidad con
+registros anteriores. Las columnas genericas AE:AK son las autoritativas para
+nuevas sesiones y permiten manejar unidades, libras, onzas fluidas u otras
+medidas sin cambiar el esquema.
+
+Al cancelar un pedido, `Cantidad_Fuente_Consumida` se reincorpora a la fuente.
+El valor nunca puede superar la cantidad fisica original y la sesion permanece
+como `Revertida` para conservar trazabilidad.
 
 ## Produccion_Areas
 
@@ -255,9 +275,17 @@ realiza posteriormente la asignacion.
 | R | Responsable |
 | S | Nota |
 | T | Visible_App |
+| U | Unidad_Medida |
+| V | Cantidad_Disponible |
 
-`Total_Fisico` es la suma de unidades funcionales y averia. Los estados de
-disponibilidad son `Disponible`, `Parcial` y `Agotado`.
+`Total_Fisico` es la suma de cantidad funcional y averia. `Unidad_Medida`
+proviene del producto general. `Cantidad_Disponible` es el saldo autoritativo
+que Empaque modifica al declarar uso total o parcial.
+
+`Funcionales_Disponibles` y `Averia_Disponible` se conservan como columnas
+historicas para no romper registros anteriores; las nuevas asignaciones no
+separan el consumo por categoria. Los estados de disponibilidad son
+`Disponible`, `Parcial` y `Agotado`.
 
 ## Asignaciones_Pedido
 
@@ -279,6 +307,15 @@ Relacion tecnica entre una linea de pedido y cada lote o recurso utilizado para 
 | L | Motivo_Reversion |
 | M | ID_Pedido_Visible |
 | N | ID_Lote_Visible |
+| O | Cantidad_Fuente_Consumida |
+| P | Unidad_Fuente |
+| Q | ID_Producto_Fuente |
+| R | ID_Producto_Destino |
+
+Las columnas H:I describen la salida terminada que avanza el pedido, normalmente
+cajas. Las columnas O:R describen el recurso de origen consumido. Esta separacion
+evita mezclar "cajas completadas" con "unidades/libras/onzas retiradas" y se
+traduce directamente a claves foraneas y cantidades en PostgreSQL.
 
 ## Inventario_Bodega
 
@@ -338,4 +375,6 @@ La migracion:
 - agrega columnas al final, sin desplazar las actuales;
 - genera UUID solo cuando faltan;
 - crea asignaciones para sesiones de Empaque existentes;
+- completa `Unidad_Produccion`, `Unidad_Medida` y `Cantidad_Disponible` en registros anteriores;
+- rellena relaciones genericas de consumo cuando pueden reconstruirse;
 - puede repetirse sin duplicar identificadores ni asignaciones.

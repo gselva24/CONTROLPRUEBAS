@@ -73,13 +73,14 @@ elements["ta-producto-info"] = element();
 elements["ta-funcionales"] = element();
 elements["ta-averia"] = element();
 elements["ta-total"] = element();
+elements["ta-total-unidad"] = element();
 elements["ta-reportes"] = element();
 
 vm.runInContext(`
     clientesCatalog = [{ idCliente: "CLI-UUID", codigo: "CLI", nombre: "Cliente Prueba", visibleApp: "SI" }];
     productosCatalog = [
-        { idProducto: "PROD-TAMAL", nombreBase: "Tamal Pisque", presentacion: "12x4x6.35 oz.", area: "Tamales", visibleApp: "SI" },
-        { idProducto: "PROD-PLANCHA", nombreBase: "Rigua", presentacion: "30x5", area: "Planchas", visibleApp: "SI" }
+        { idProducto: "PROD-TAMAL", nombreBase: "Tamal Pisque", presentacion: "12x4x6.35 oz.", area: "Tamales", unidadProduccion: "unidad", visibleApp: "SI" },
+        { idProducto: "PROD-PLANCHA", nombreBase: "Rigua", presentacion: "30x5", area: "Planchas", unidadProduccion: "unidad", visibleApp: "SI" }
     ];
     productosClienteCatalog = [
         { idProductoCliente: "SKU-TAMAL", idCliente: "CLI-UUID", idProducto: "PROD-TAMAL", nombreComercial: "TAMAL PISQUE 12x4", visibleApp: "SI" },
@@ -96,6 +97,7 @@ elements["ta-funcionales"].value = "1900";
 elements["ta-averia"].value = "100";
 vm.runInContext("actualizarTotalTamales();", context);
 assert.equal(elements["ta-total"].textContent, "2,000");
+assert.equal(elements["ta-total-unidad"].textContent, " unidad");
 
 elements["e-pedido-cliente-select"] = element();
 elements["e-pedido-cliente-select"].value = "CLI-0107-001";
@@ -149,19 +151,22 @@ vm.runInContext(`
         visibleApp: "SI"
     }];
     produccionesAreas = [
-        { idProduccion: "PROD-1", codigoProduccion: "TAM-0107-001", idCliente: "CLI-UUID", idProducto: "PROD-TAMAL", producto: "TAMAL PISQUE 12x4", funcionalesDisponibles: 1900, averiaDisponible: 100, visibleApp: "SI" },
-        { idProduccion: "PROD-2", codigoProduccion: "TAM-0107-002", idCliente: "OTRO", idProducto: "PROD-TAMAL", producto: "TAMAL PISQUE 12x4", funcionalesDisponibles: 500, averiaDisponible: 25, visibleApp: "SI" }
+        { idProduccion: "PROD-1", codigoProduccion: "TAM-0107-001", area: "Tamales", idCliente: "CLI-UUID", idProducto: "PROD-TAMAL", producto: "TAMAL PISQUE 12x4", cliente: "Cliente Prueba", cantidadDisponible: 2000, unidadMedida: "unidad", visibleApp: "SI" },
+        { idProduccion: "PROD-2", codigoProduccion: "TAM-0107-002", area: "Tamales", idCliente: "OTRO", idProducto: "OTRO-PRODUCTO", producto: "ATOL", cliente: "Otro cliente", cantidadDisponible: 525, unidadMedida: "oz fl", visibleApp: "SI" },
+        { idProduccion: "PROD-3", codigoProduccion: "PLA-0107-001", area: "Planchas", idCliente: "OTRO", idProducto: "PROD-PLANCHA", producto: "RIGUA", cliente: "Otro cliente", cantidadDisponible: 300, unidadMedida: "unidad", visibleApp: "SI" }
     ];
 `, context);
 elements["e-pedido-cliente-select"].value = "CLI-0107-001";
 elements["e-detalle-pedido-select"].value = "LIN-TAMAL";
 vm.runInContext("renderEmpaqueLoteSelect();", context);
-assert.match(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-001 - TAMAL PISQUE 12x4 - Funcionales/);
-assert.doesNotMatch(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-002 - TAMAL PISQUE 12x4 - Funcionales/);
-assert.match(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-002 - TAMAL PISQUE 12x4 - Avería/);
+assert.match(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-001 - TAMAL PISQUE 12x4/);
+assert.match(elements["e-lote-fruta-select"].innerHTML, /TAM-0107-002 - ATOL/);
+assert.doesNotMatch(elements["e-lote-fruta-select"].innerHTML, /PLA-0107-001/);
 
 elements["p-cliente-select"] = element();
 elements["p-cliente-select"].value = "CLI-UUID";
+elements["p-linea-area"] = element();
+elements["p-linea-area"].value = "Empaque";
 elements["p-linea-producto-cliente"] = element();
 elements["p-linea-producto-info"] = element();
 elements["p-linea-cantidad"] = element();
@@ -205,6 +210,8 @@ assert.equal(lineaCatalogo.unidad, "cajas");
 elements["p-producto-area"] = element();
 elements["p-producto-base-wrapper"] = element();
 elements["p-producto-base-produccion"] = element();
+elements["p-producto-unidad-wrapper"] = element();
+elements["p-producto-unidad"] = element();
 elements["p-producto-area"].value = "Empaque";
 vm.runInContext("actualizarCampoBaseProduccionProducto();", context);
 assert.equal(elements["p-producto-base-wrapper"].classList.contains("hidden"), false);
@@ -213,8 +220,12 @@ elements["p-producto-area"].value = "Tamales";
 vm.runInContext("actualizarCampoBaseProduccionProducto();", context);
 assert.equal(elements["p-producto-base-wrapper"].classList.contains("hidden"), true);
 assert.equal(elements["p-producto-base-produccion"].value, "");
+assert.equal(elements["p-producto-unidad-wrapper"].classList.contains("hidden"), false);
+assert.equal(elements["p-producto-unidad"].value, "unidad");
 
 elements["cards-container"] = element();
+elements["planchas-history-container"] = element();
+elements["tamales-history-container"] = element();
 
 vm.runInContext(`
     pedidosCliente = [{
@@ -284,6 +295,8 @@ vm.runInContext("isAdmin = true; renderMobileHistory();", context);
 assert.match(elements["cards-container"].children[0].innerHTML, /class="grid grid-cols-2/);
 assert.match(elements["cards-container"].children[0].innerHTML, /gerenteOcultarLoteApp\('L-NANCE'\)/);
 assert.match(elements["cards-container"].children[0].innerHTML, /gerenteBorrarLoteTotal\('L-NANCE'\)/);
+assert.match(elements["tamales-history-container"].innerHTML, /TAM-0107-002/);
+assert.match(elements["planchas-history-container"].innerHTML, /PLA-0107-001/);
 
 elements["p-cards-container"] = element();
 elements["p-admin-panel"] = element();

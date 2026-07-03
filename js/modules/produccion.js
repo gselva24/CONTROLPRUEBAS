@@ -67,22 +67,32 @@ function renderProductosProduccion(area) {
     if (info) {
         info.innerHTML = seleccionado
             ? `<span class="text-slate-400">Producto base:</span> <strong>${seleccionado.producto.nombreBase}</strong><br>
-               <span class="text-slate-400">Presentación:</span> ${seleccionado.producto.presentacion || "Sin presentación"}`
+               <span class="text-slate-400">Presentación:</span> ${seleccionado.producto.presentacion || "Sin presentación"}<br>
+               <span class="text-slate-400">Unidad de producción:</span> ${seleccionado.producto.unidadProduccion || "unidad"}`
             : "";
         info.classList.toggle("hidden", !seleccionado);
     }
+    actualizarTotalProduccion(area);
 }
 
 function actualizarProductoProduccion(area) {
     renderProductosProduccion(area);
+    actualizarTotalProduccion(area);
+}
+
+function unidadProduccionSeleccionada(area) {
+    const seleccion = buscarProductoProduccionSeleccionado(area);
+    return seleccion?.producto?.unidadProduccion || "unidad";
 }
 
 function actualizarTotalProduccion(area) {
     const config = produccionConfig(area);
-    const funcionales = Math.max(0, Math.floor(Number(document.getElementById(`${config.prefix}-funcionales`)?.value || 0)));
-    const averia = Math.max(0, Math.floor(Number(document.getElementById(`${config.prefix}-averia`)?.value || 0)));
+    const funcionales = Math.max(0, Number(document.getElementById(`${config.prefix}-funcionales`)?.value || 0));
+    const averia = Math.max(0, Number(document.getElementById(`${config.prefix}-averia`)?.value || 0));
     const total = document.getElementById(`${config.prefix}-total`);
-    if (total) total.textContent = (funcionales + averia).toLocaleString("es-GT");
+    const unidad = document.getElementById(`${config.prefix}-total-unidad`);
+    if (total) total.textContent = (funcionales + averia).toLocaleString("es-GT", { maximumFractionDigits: 2 });
+    if (unidad) unidad.textContent = ` ${unidadProduccionSeleccionada(area)}`;
 }
 
 function buscarProductoProduccionSeleccionado(area) {
@@ -104,12 +114,12 @@ function submitProduccionArea(area) {
 
     if (!idCliente) { alert("Seleccione el cliente destinatario."); return; }
     if (!seleccion) { alert(`Seleccione un producto válido del área de ${area}.`); return; }
-    if (!Number.isInteger(unidadesFuncionales) || unidadesFuncionales <= 0) {
-        alert("Ingrese una cantidad válida de unidades funcionales.");
+    if (!Number.isFinite(unidadesFuncionales) || unidadesFuncionales <= 0) {
+        alert("Ingrese una cantidad funcional válida.");
         return;
     }
-    if (!Number.isInteger(unidadesAveria) || unidadesAveria < 0) {
-        alert("La avería debe ser un número entero igual o mayor a cero.");
+    if (!Number.isFinite(unidadesAveria) || unidadesAveria < 0) {
+        alert("La avería debe ser un número igual o mayor a cero.");
         return;
     }
     if (!responsable) { alert("Ingrese el responsable del reporte."); return; }
@@ -178,8 +188,12 @@ function renderReportesProduccion(area) {
     }
 
     container.innerHTML = reportes.slice(0, 20).map(item => {
-        const funcionales = Number(item.funcionalesDisponibles || 0);
-        const averia = Number(item.averiaDisponible || 0);
+        const disponible = Number(
+            typeof item.cantidadDisponible !== "undefined"
+                ? item.cantidadDisponible
+                : Number(item.funcionalesDisponibles || 0) + Number(item.averiaDisponible || 0)
+        );
+        const unidad = item.unidadMedida || "unidad";
         return `
             <article class="border border-slate-700 rounded-lg p-3 space-y-2 bg-slate-900/50">
                 <div class="flex items-start justify-between gap-3">
@@ -190,10 +204,10 @@ function renderReportesProduccion(area) {
                     </div>
                     <span class="text-[10px] font-black uppercase text-slate-300">${item.estadoDisponibilidad}</span>
                 </div>
-                <p class="text-[10px] text-slate-400">Reportado: ${Number(item.unidadesFuncionales || 0).toLocaleString("es-GT")} funcionales + ${Number(item.unidadesAveria || 0).toLocaleString("es-GT")} avería</p>
+                <p class="text-[10px] text-slate-400">Reportado: ${Number(item.unidadesFuncionales || 0).toLocaleString("es-GT", { maximumFractionDigits: 2 })} funcionales + ${Number(item.unidadesAveria || 0).toLocaleString("es-GT", { maximumFractionDigits: 2 })} avería</p>
                 <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div><span class="block text-slate-500">Funcionales disponibles</span><strong>${funcionales.toLocaleString("es-GT")} unid.</strong></div>
-                    <div><span class="block text-slate-500">Avería disponible</span><strong>${averia.toLocaleString("es-GT")} unid.</strong></div>
+                    <div><span class="block text-slate-500">Total físico</span><strong>${Number(item.totalFisico || 0).toLocaleString("es-GT", { maximumFractionDigits: 2 })} ${unidad}</strong></div>
+                    <div><span class="block text-slate-500">Disponible para Empaque</span><strong>${disponible.toLocaleString("es-GT", { maximumFractionDigits: 2 })} ${unidad}</strong></div>
                 </div>
             </article>`;
     }).join("");
