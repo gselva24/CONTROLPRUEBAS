@@ -51,8 +51,10 @@ function buscarDetalleEmpaqueSeleccionado() {
     return detalles.find(detalle => detalle.idLinea === detalleSelect.value) || null;
 }
 
-function normalizarTextoFront(valor) {
-    return (valor || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+if (typeof normalizarTextoFront !== "function") {
+    function normalizarTextoFront(valor) {
+        return (valor || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+    }
 }
 
 function tipoFuenteDetalleEmpaque(detalle) {
