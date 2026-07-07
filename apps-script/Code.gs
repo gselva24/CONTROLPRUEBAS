@@ -3,6 +3,7 @@ function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   asegurarEstructuraTecnica_(ss, false);
   var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], productos: [], productosCliente: [], pedidosCliente: [], detallePedidosCliente: [], asignacionesPedido: [], empaqueSesiones: [], produccionesAreas: [] };
+  var appContext = e && e.parameter ? (e.parameter.app || "") : "";
 
   // 1. Cargar Opciones del Catálogo
   var sheetOpciones = ss.getSheetByName("Opciones");
@@ -312,7 +313,74 @@ function doGet(e) {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(filtrarDataPorApp_(data, appContext))).setMimeType(ContentService.MimeType.JSON);
+}
+
+function filtrarDataPorApp_(data, appContext) {
+  var contexto = normalizarTexto_(appContext || "");
+  var filtrado = JSON.parse(JSON.stringify(data));
+  filtrado.appContext = appContext || "full";
+
+  if (contexto === "frutas-empaque" || contexto === "frutasempaque") {
+    filtrado.inventarioBodega = [];
+    filtrado.movimientosBodega = [];
+    return filtrado;
+  }
+
+  var areaObjetivo = "";
+  if (contexto === "planchas" || contexto === "plancha") areaObjetivo = "Planchas";
+  if (contexto === "tamales" || contexto === "tamal") areaObjetivo = "Tamales";
+  if (!areaObjetivo) return filtrado;
+
+  var areaNormalizada = normalizarAreaOperativa_(areaObjetivo);
+  var productosPermitidos = {};
+  filtrado.productos = data.productos.filter(function(producto) {
+    var coincide = normalizarAreaOperativa_(producto.area) === areaNormalizada;
+    if (coincide) productosPermitidos[producto.idProducto] = true;
+    return coincide;
+  });
+  filtrado.productosCliente = data.productosCliente.filter(function(relacion) {
+    return productosPermitidos[relacion.idProducto];
+  });
+
+  var pedidosPermitidos = {};
+  var lineasPermitidas = {};
+  filtrado.detallePedidosCliente = data.detallePedidosCliente.filter(function(detalle) {
+    var coincide = normalizarAreaOperativa_(detalle.area) === areaNormalizada;
+    if (coincide) {
+      pedidosPermitidos[detalle.idPedido] = true;
+      if (detalle.idLinea) lineasPermitidas[detalle.idLinea] = true;
+    }
+    return coincide;
+  });
+  filtrado.pedidosCliente = data.pedidosCliente.filter(function(pedido) {
+    return pedidosPermitidos[pedido.idPedido];
+  });
+
+  var produccionesPermitidas = {};
+  filtrado.produccionesAreas = data.produccionesAreas.filter(function(produccion) {
+    var coincide = normalizarAreaOperativa_(produccion.area) === areaNormalizada;
+    if (coincide) produccionesPermitidas[produccion.idProduccion] = true;
+    return coincide;
+  });
+
+  var sesionesPermitidas = {};
+  filtrado.empaqueSesiones = data.empaqueSesiones.filter(function(sesion) {
+    var coincide = normalizarAreaOperativa_(sesion.area) === areaNormalizada || produccionesPermitidas[sesion.idProduccion];
+    if (coincide) sesionesPermitidas[sesion.idSesion] = true;
+    return coincide;
+  });
+  filtrado.asignacionesPedido = data.asignacionesPedido.filter(function(asignacion) {
+    return lineasPermitidas[asignacion.idLinea] || sesionesPermitidas[asignacion.idSesion];
+  });
+
+  filtrado.frutas = [];
+  filtrado.pedidosPendientes = [];
+  filtrado.pedidosParciales = [];
+  filtrado.historial = [];
+  filtrado.inventarioBodega = [];
+  filtrado.movimientosBodega = [];
+  return filtrado;
 }
 
 function doPost(e) {

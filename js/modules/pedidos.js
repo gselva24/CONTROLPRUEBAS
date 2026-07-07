@@ -25,24 +25,31 @@ function toggleDetallePedido(idPedido) {
 function actualizarVistaPedidosGerente() {
     const adminPanel = document.getElementById('p-admin-panel');
     if (!adminPanel) return;
-    adminPanel.classList.toggle('hidden', !isAdmin);
+    const soloProduccion = typeof isProductionOnlyApp === "function" && isProductionOnlyApp();
+    adminPanel.classList.toggle('hidden', !isAdmin || soloProduccion);
     renderClientesList();
     renderProductosAdmin();
 }
 
 function setPedidosMode(mode) {
-    document.getElementById('p-create-panel').classList.toggle('hidden', mode !== 'crear');
-    document.getElementById('p-clientes-panel').classList.toggle('hidden', mode !== 'clientes');
-    document.getElementById('p-products-panel').classList.toggle('hidden', mode !== 'productos');
+    const createPanel = document.getElementById('p-create-panel');
+    const clientesPanel = document.getElementById('p-clientes-panel');
+    const productsPanel = document.getElementById('p-products-panel');
+    if (createPanel) createPanel.classList.toggle('hidden', mode !== 'crear');
+    if (clientesPanel) clientesPanel.classList.toggle('hidden', mode !== 'clientes');
+    if (productsPanel) productsPanel.classList.toggle('hidden', mode !== 'productos');
 
     ["lista", "crear", "clientes", "productos"].forEach(nombre => {
-        document.getElementById(`p-mode-${nombre === "crear" ? "create" : nombre === "clientes" ? "clients" : nombre === "productos" ? "products" : "list"}-btn`).className = nombre === mode
+        const button = document.getElementById(`p-mode-${nombre === "crear" ? "create" : nombre === "clientes" ? "clients" : nombre === "productos" ? "products" : "list"}-btn`);
+        if (!button) return;
+        button.className = nombre === mode
             ? "py-2 rounded-lg font-bold bg-emerald-600 text-white"
             : "py-2 rounded-lg font-bold bg-slate-700 text-slate-300";
     });
 
-    if (mode === 'crear' && !document.getElementById('p-fecha-carga').value) {
-        document.getElementById('p-fecha-carga').valueAsDate = new Date();
+    const fechaCarga = document.getElementById('p-fecha-carga');
+    if (mode === 'crear' && fechaCarga && !fechaCarga.value) {
+        fechaCarga.valueAsDate = new Date();
     }
     if (mode === 'productos') renderProductosAdmin();
 }
@@ -517,7 +524,12 @@ function postPedidos(payload, successMessage, modeAfter = "lista") {
 }
 
 function detallesDePedido(idPedido) {
-    return detallePedidosCliente.filter(d => d.idPedido === idPedido && d.visibleApp !== "NO");
+    return detallePedidosCliente
+        .filter(d => d.idPedido === idPedido && d.visibleApp !== "NO")
+        .filter(d => {
+            const area = typeof appOrderArea === "function" ? appOrderArea() : "";
+            return !area || normalizarAreaProduccion(d.area) === normalizarAreaProduccion(area);
+        });
 }
 
 function calcularProgresoPedido(detalles) {
@@ -539,7 +551,8 @@ function estilosEstadoPedido(estado) {
 
 function renderPedidosResumen() {
     if (!document.getElementById('p-resumen-abiertos')) return;
-    const visibles = pedidosCliente.filter(p => p.visibleApp !== "NO");
+    const areaContexto = typeof appOrderArea === "function" ? appOrderArea() : "";
+    const visibles = pedidosCliente.filter(p => p.visibleApp !== "NO" && (!areaContexto || detallesDePedido(p.idPedido).length > 0));
     const hoy = new Date().toISOString().slice(0, 10);
     document.getElementById('p-resumen-abiertos').innerText = visibles.filter(p => p.estadoPedido === "Abierto").length;
     document.getElementById('p-resumen-proceso').innerText = visibles.filter(p => p.estadoPedido === "En proceso").length;
@@ -551,8 +564,10 @@ function renderPedidosCards() {
     const container = document.getElementById('p-cards-container');
     if (!container) return;
     const adminPanel = document.getElementById('p-admin-panel');
-    if (adminPanel) adminPanel.classList.toggle('hidden', !isAdmin);
-    const visibles = pedidosCliente.filter(p => p.visibleApp !== "NO");
+    const soloProduccion = typeof isProductionOnlyApp === "function" && isProductionOnlyApp();
+    if (adminPanel) adminPanel.classList.toggle('hidden', !isAdmin || soloProduccion);
+    const areaContexto = typeof appOrderArea === "function" ? appOrderArea() : "";
+    const visibles = pedidosCliente.filter(p => p.visibleApp !== "NO" && (!areaContexto || detallesDePedido(p.idPedido).length > 0));
     container.innerHTML = "";
     if (visibles.length === 0) {
         container.innerHTML = `<p class="text-center text-xs text-slate-500 py-4">No hay pedidos registrados.</p>`;

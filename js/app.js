@@ -16,10 +16,29 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     fetchDataFromCloud();
-    switchView('home');
+    configureAppShell();
+    switchView(typeof defaultAppView === "function" ? defaultAppView() : "home");
 });
 
 function switchView(viewName) {
+    if (typeof appAllowsView === "function" && !appAllowsView(viewName)) {
+        viewName = typeof defaultAppView === "function" ? defaultAppView() : "home";
+    }
     document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
-    document.getElementById(`view-${viewName}`).classList.remove('hidden');
+    const view = document.getElementById(`view-${viewName}`);
+    if (view) view.classList.remove('hidden');
+}
+
+function configureAppShell() {
+    if (typeof APP_CONFIG !== "undefined") {
+        document.querySelectorAll("[data-app-title]").forEach(node => {
+            node.textContent = APP_CONFIG.title;
+        });
+    }
+    document.querySelectorAll("[data-view-target]").forEach(node => {
+        const view = node.getAttribute("data-view-target");
+        if (typeof appAllowsView === "function") {
+            node.classList.toggle("hidden", !appAllowsView(view));
+        }
+    });
 }

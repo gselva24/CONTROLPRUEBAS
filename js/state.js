@@ -13,6 +13,8 @@
         let empaqueSesiones = [];
         let produccionesAreas = [];
         let bodegaNuevoMode = false;
+        let historialAreaFiltro = "todos";
+        let historialEstadoFiltro = "activos";
         
         let isRetomadoMode = false; 
         let timerInterval = null;

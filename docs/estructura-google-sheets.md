@@ -2,6 +2,19 @@
 
 Esta es la base esperada por `apps-script/Code.gs`.
 
+## Interfaces y API
+
+La base de datos sigue centralizada en un solo Google Sheet. Las tres
+interfaces publicadas en GitHub Pages usan el mismo Apps Script y se diferencian
+por el parametro `app` en el `doGet`:
+
+- `?app=frutas-empaque`: carga Frutas, Empaque, Pedidos e Historial general.
+- `?app=planchas`: carga catalogos, pedidos, lineas y lotes relacionados con Planchas.
+- `?app=tamales`: carga catalogos, pedidos, lineas y lotes relacionados con Tamales.
+
+Inventario/Bodega queda temporalmente fuera de las interfaces operativas nuevas;
+sus hojas se mantienen para una fase posterior.
+
 ## Opciones
 
 | Columna | Nombre |

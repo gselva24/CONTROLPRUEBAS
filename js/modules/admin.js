@@ -1,8 +1,10 @@
 ﻿function promptAdmin() {
             if (isAdmin) {
                 isAdmin = false;
-                document.getElementById('g-box-catalogo').classList.add('hidden');
-                document.getElementById('chrono-display').classList.add('hidden'); 
+                const catalogBox = document.getElementById('g-box-catalogo');
+                const chrono = document.getElementById('chrono-display');
+                if (catalogBox) catalogBox.classList.add('hidden');
+                if (chrono) chrono.classList.add('hidden');
                 document.getElementById('admin-toggle-btn').innerText = "🔑 Gerente";
                 document.getElementById('admin-toggle-btn').classList.replace('bg-rose-600', 'bg-slate-700');
                 if (typeof actualizarVistaPedidosGerente === "function") actualizarVistaPedidosGerente();
@@ -12,10 +14,12 @@
                 let pass = prompt("Ingrese contraseña de Gerente:");
                 if (pass === GERENTE_PASSWORD) {
                     isAdmin = true;
-                    document.getElementById('g-box-catalogo').classList.remove('hidden');
+                    const catalogBox = document.getElementById('g-box-catalogo');
+                    const chrono = document.getElementById('chrono-display');
+                    if (catalogBox) catalogBox.classList.remove('hidden');
                     
-                    if (timerInterval && startTime) {
-                        document.getElementById('chrono-display').classList.remove('hidden');
+                    if (chrono && timerInterval && startTime) {
+                        chrono.classList.remove('hidden');
                     }
                     
                     document.getElementById('admin-toggle-btn').innerText = "🔒 Cerrar";
@@ -29,13 +33,17 @@
         }
 
         function renderCatalog() {
-            const list = document.getElementById('catalog-list'); list.innerHTML = "";
+            const list = document.getElementById('catalog-list');
+            if (!list) return;
+            list.innerHTML = "";
             frutasCatalog.forEach((f, i) => { list.innerHTML += `<li class="flex justify-between bg-slate-900 p-2 rounded"><span>${f}</span> <button onclick="removeFruta(${i})" class="text-rose-500 font-bold">X</button></li>`; });
         }
 
         function addFrutaCatalog() {
-            const val = document.getElementById('new-fruta-input').value;
-            if (val) { frutasCatalog.push(val); document.getElementById('new-fruta-input').value = ""; saveCatalogToCloud(); }
+            const input = document.getElementById('new-fruta-input');
+            if (!input) return;
+            const val = input.value;
+            if (val) { frutasCatalog.push(val); input.value = ""; saveCatalogToCloud(); }
         }
 
         function removeFruta(index) { frutasCatalog.splice(index, 1); saveCatalogToCloud(); }
@@ -47,7 +55,7 @@
                 body: JSON.stringify({ action: "updateOptions", options: frutasCatalog }) 
             }).then(() => {
                 renderCatalog();
-                renderFrutasSelect();
+                if (typeof renderFrutasSelect === "function") renderFrutasSelect();
                 if (typeof renderProductosAdmin === "function") renderProductosAdmin();
             });
         }
