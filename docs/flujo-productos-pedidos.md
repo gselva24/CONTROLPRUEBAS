@@ -15,6 +15,18 @@ Cada pagina define `APP_CONTEXT` y el frontend solicita datos al Apps Script con
 paquete de datos para que cada interfaz reciba solo los catalogos, pedidos,
 lineas, lotes y sesiones que necesita.
 
+Ademas, cada interfaz carga datos por vista:
+
+- `view=main`: datos minimos para operar el modulo.
+- `view=empaque`: pedidos, lineas y fuentes disponibles para empacar.
+- `view=pedidos`: pedidos y catalogos relacionados.
+- `view=historial`: lotes y sesiones de trazabilidad.
+
+Los filtros `estado=activos`, `estado=completados` y `estado=todos` reducen la
+cantidad de datos. Historial carga activos por defecto y solicita completados
+solo cuando el usuario cambia el filtro. Apps Script usa cache temporal por
+`app/view/estado/limit` y lo limpia cuando se guarda un cambio operativo.
+
 Inventario/Bodega queda fuera de estas interfaces por ahora. Las hojas y el
 codigo se conservan para retomarlo despues, pero no se cargan en las paginas
 operativas nuevas.
