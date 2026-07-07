@@ -28,13 +28,75 @@ function sesionesDeProduccion(idProduccion) {
     );
 }
 
+function historialAreasPermitidas() {
+    return (typeof APP_CONFIG !== "undefined" && APP_CONFIG.historyAreas) || ["frutas", "planchas", "tamales"];
+}
+
+function historialAreaVisible(area) {
+    const normalizada = normalizarAreaProduccion(area);
+    if (!historialAreasPermitidas().includes(normalizada)) return false;
+    return historialAreaFiltro === "todos" || historialAreaFiltro === normalizada;
+}
+
+function loteFrutaCompletado(lote) {
+    return lote.estadoEmpaqueGlobal === "Empacado Total" || Number(lote.pesoDisponibleEmpaque || 0) <= 0;
+}
+
+function loteProduccionCompletado(lote) {
+    return normalizarTextoFront(lote.estadoDisponibilidad) === "agotado" || cantidadDisponibleProduccion(lote) <= 0;
+}
+
+function coincideFiltroEstado(completado) {
+    if (historialEstadoFiltro === "todos") return true;
+    if (historialEstadoFiltro === "completados") return completado;
+    return !completado;
+}
+
+function setHistorialAreaFiltro(area) {
+    historialAreaFiltro = area;
+    renderMobileHistory();
+}
+
+function setHistorialEstadoFiltro(estado) {
+    historialEstadoFiltro = estado;
+    renderMobileHistory();
+}
+
+function renderHistorialFiltros() {
+    const areaContainer = document.getElementById("historial-area-filters");
+    const estadoContainer = document.getElementById("historial-estado-filters");
+    if (areaContainer) {
+        const areas = historialAreasPermitidas();
+        const opciones = areas.length > 1
+            ? [{ id: "todos", label: "Todos" }].concat(areas.map(area => ({ id: area, label: area === "frutas" ? "Frutas" : area === "planchas" ? "Planchas" : "Tamales" })))
+            : areas.map(area => ({ id: area, label: area === "planchas" ? "Planchas" : area === "tamales" ? "Tamales" : "Frutas" }));
+        if (!opciones.some(opcion => opcion.id === historialAreaFiltro)) historialAreaFiltro = opciones[0]?.id || "todos";
+        areaContainer.innerHTML = opciones.map(opcion => `
+            <button type="button" onclick="setHistorialAreaFiltro('${opcion.id}')" class="${historialAreaFiltro === opcion.id ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'} px-3 py-2 rounded-xl text-[10px] font-black uppercase border border-slate-700">${opcion.label}</button>
+        `).join("");
+    }
+    if (estadoContainer) {
+        const opcionesEstado = [
+            { id: "activos", label: "Activos" },
+            { id: "completados", label: "Completados" },
+            { id: "todos", label: "Todos" }
+        ];
+        estadoContainer.innerHTML = opcionesEstado.map(opcion => `
+            <button type="button" onclick="setHistorialEstadoFiltro('${opcion.id}')" class="${historialEstadoFiltro === opcion.id ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300'} px-3 py-2 rounded-xl text-[10px] font-black uppercase border border-slate-700">${opcion.label}</button>
+        `).join("");
+    }
+}
+
 function renderMobileHistory() {
+    renderHistorialFiltros();
     const container = document.getElementById('cards-container');
-    if (!container) return;
+    if (container) {
     container.innerHTML = "";
-    const filtrado = historialCompleto.filter(i => i.visibleApp === "SI");
+    const filtrado = historialAreaVisible("frutas")
+        ? historialCompleto.filter(i => i.visibleApp === "SI" && coincideFiltroEstado(loteFrutaCompletado(i)))
+        : [];
     if (filtrado.length === 0) {
-        container.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No hay lotes activos.</p>';
+        container.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No hay lotes para este filtro.</p>';
     } else [...filtrado].reverse().forEach(p => {
         const frutaEstilos = (p.estadoFrutas === "Proceso Completo" || p.estadoFrutas === "Finalizado")
             ? { bg: "bg-emerald-950/40", border: "border-emerald-700/50", text: "text-emerald-400", lightText: "text-emerald-200" }
@@ -110,6 +172,7 @@ function renderMobileHistory() {
             </div>`;
         container.appendChild(card);
     });
+    }
 
     renderHistorialProduccion("Planchas", "planchas-history-container");
     renderHistorialProduccion("Tamales", "tamales-history-container");
@@ -120,11 +183,13 @@ function renderHistorialProduccion(area, containerId) {
     if (!container) return;
     const reportes = produccionesAreas
         .filter(item => item.visibleApp !== "NO" && normalizarAreaProduccion(item.area) === normalizarAreaProduccion(area))
+        .filter(item => historialAreaVisible(area))
+        .filter(item => coincideFiltroEstado(loteProduccionCompletado(item)))
         .slice()
         .reverse();
 
     if (!reportes.length) {
-        container.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No hay lotes registrados.</p>';
+        container.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No hay lotes para este filtro.</p>';
         return;
     }
 

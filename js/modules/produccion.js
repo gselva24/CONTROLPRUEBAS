@@ -14,6 +14,18 @@ function produccionConfig(area) {
     return PRODUCCION_CONFIG[area];
 }
 
+function cantidadDisponibleProduccion(produccion) {
+    if (!produccion) return 0;
+    if (typeof produccion.cantidadDisponible !== "undefined") {
+        return Number(produccion.cantidadDisponible || 0);
+    }
+    return Number(produccion.funcionalesDisponibles || 0) + Number(produccion.averiaDisponible || 0);
+}
+
+function unidadFuenteProduccion(produccion) {
+    return produccion?.unidadMedida || "unidad";
+}
+
 function productosClienteProduccion(area, idCliente) {
     return productosClienteCatalog
         .filter(rel => rel.visibleApp !== "NO" && rel.idCliente === idCliente)

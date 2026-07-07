@@ -1,5 +1,24 @@
 # Flujo de productos y pedidos
 
+## Interfaces separadas
+
+La aplicacion se divide en tres entradas de GitHub Pages que comparten el mismo
+Google Sheet y el mismo Apps Script:
+
+- `index.html`: portal de seleccion.
+- `frutas-empaque.html`: Frutas, Empaque, Pedidos e Historial general.
+- `planchas.html`: reporte de Planchas, pedidos relacionados y lotes de Planchas.
+- `tamales.html`: reporte de Tamales, pedidos relacionados y lotes de Tamales.
+
+Cada pagina define `APP_CONTEXT` y el frontend solicita datos al Apps Script con
+`?app=frutas-empaque`, `?app=planchas` o `?app=tamales`. El backend filtra el
+paquete de datos para que cada interfaz reciba solo los catalogos, pedidos,
+lineas, lotes y sesiones que necesita.
+
+Inventario/Bodega queda fuera de estas interfaces por ahora. Las hojas y el
+codigo se conservan para retomarlo despues, pero no se cargan en las paginas
+operativas nuevas.
+
 ## Catalogo general
 
 El gerente registra una sola vez el producto fisico:

@@ -1,7 +1,8 @@
 ﻿function fetchDataFromCloud() {
             document.getElementById('global-status').innerText = "⏳ Sincronizando...";
-            const cacheBust = GOOGLE_SHEETS_URL.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-            fetch(`${GOOGLE_SHEETS_URL}${cacheBust}`, { redirect: "follow" })
+            const baseUrl = typeof appApiUrl === "function" ? appApiUrl() : GOOGLE_SHEETS_URL;
+            const cacheBust = baseUrl.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
+            fetch(`${baseUrl}${cacheBust}`, { redirect: "follow" })
             .then(res => res.json())
             .then(data => {
                 frutasCatalog = data.frutas || [];
@@ -18,20 +19,20 @@
                 empaqueSesiones = data.empaqueSesiones || [];
                 produccionesAreas = data.produccionesAreas || [];
                 
-                renderFrutasSelect(); 
-                renderParcialesSelect(); 
+                if (typeof renderFrutasSelect === "function") renderFrutasSelect();
+                if (typeof renderParcialesSelect === "function") renderParcialesSelect();
                 if (typeof renderPlanchas === "function") renderPlanchas();
                 if (typeof renderTamales === "function") renderTamales();
-                renderEmpaqueSelect(); 
-                renderBodegaSelect();
-                renderBodegaInventory();
-                renderClientesSelect();
-                renderProductosPedidoSelect();
-                renderProductosAdmin();
-                renderPedidosResumen();
-                renderPedidosCards();
-                renderClientesList();
-                renderMobileHistory(); 
+                if (typeof renderEmpaqueSelect === "function") renderEmpaqueSelect();
+                if (typeof renderBodegaSelect === "function") renderBodegaSelect();
+                if (typeof renderBodegaInventory === "function") renderBodegaInventory();
+                if (typeof renderClientesSelect === "function") renderClientesSelect();
+                if (typeof renderProductosPedidoSelect === "function") renderProductosPedidoSelect();
+                if (typeof renderProductosAdmin === "function") renderProductosAdmin();
+                if (typeof renderPedidosResumen === "function") renderPedidosResumen();
+                if (typeof renderPedidosCards === "function") renderPedidosCards();
+                if (typeof renderClientesList === "function") renderClientesList();
+                if (typeof renderMobileHistory === "function") renderMobileHistory();
                 
                 const historialSinMetricas = historialCompleto.some(p => typeof p.pesoProcesado === "undefined" || typeof p.cajasProcesadas === "undefined");
                 if (historialSinMetricas) {

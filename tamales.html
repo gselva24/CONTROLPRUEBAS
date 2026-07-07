@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tamales - Control V2</title>
+    <script>window.APP_CONTEXT = "tamales";</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css?v=20260707-interfaces">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 font-sans antialiased">
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-40 px-4 py-3 flex justify-between items-center shadow-md">
+        <div>
+            <a href="index.html" class="text-[10px] text-slate-400 font-bold uppercase">Control V2</a>
+            <h1 class="text-base font-black tracking-wider text-slate-200 uppercase" data-app-title>Tamales</h1>
+            <p id="global-status" class="text-[10px] text-amber-400 font-medium italic">Sincronizando con la nube...</p>
+        </div>
+        <button id="admin-toggle-btn" onclick="promptAdmin()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-xl font-bold border border-slate-600 transition">
+            Gerente
+        </button>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-4 space-y-6">
+        <section id="view-tamales" class="app-view hidden space-y-4">
+                    <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+                        <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">Volver</button>
+                        <h2 class="text-lg font-extrabold text-rose-400">Área de Tamales</h2>
+                        <p class="text-xs text-slate-400">Reporte de unidades terminadas destinadas a Empaque.</p>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cliente destinatario:</label>
+                            <select id="ta-cliente-select" onchange="actualizarProductosTamales()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Producto:</label>
+                            <select id="ta-producto-select" onchange="actualizarProductosTamales()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                        </div>
+                        <div id="ta-producto-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs"></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cantidad funcional:</label>
+                                <input id="ta-funcionales" type="number" min="0.01" step="any" inputmode="decimal" oninput="actualizarTotalTamales()" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Avería:</label>
+                                <input id="ta-averia" type="number" min="0" step="any" inputmode="decimal" oninput="actualizarTotalTamales()" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-3">
+                            <span class="block text-[10px] uppercase font-bold text-slate-500">Total físico producido</span>
+                            <strong id="ta-total" class="text-2xl text-rose-300">0</strong>
+                            <span id="ta-total-unidad" class="text-xs text-slate-400"> unidades</span>
+                        </div>
+                        <input id="ta-responsable" type="text" placeholder="Responsable" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
+                        <textarea id="ta-nota" rows="2" placeholder="Nota / referencia" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm resize-none"></textarea>
+                        <button onclick="submitTamales()" class="w-full bg-rose-600 text-white font-black py-4 rounded-xl text-sm uppercase">Guardar reporte</button>
+                    </div>
+                    <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-3">
+                        <h3 class="text-xs font-black text-slate-300 uppercase">Producciones disponibles</h3>
+                        <div id="ta-reportes" class="space-y-2"></div>
+                    </div>
+                </section>
+
+        <section id="view-pedidos" class="app-view hidden space-y-4">
+                    <div class="flex justify-between items-center">
+                        <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">⬅ Volver</button>
+                        <h2 class="text-lg font-extrabold text-emerald-400">Pedidos / Armados</h2>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                            <span class="block text-slate-400 font-bold uppercase text-[9px]">Abiertos</span>
+                            <span id="p-resumen-abiertos" class="text-2xl font-black text-amber-300">0</span>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                            <span class="block text-slate-400 font-bold uppercase text-[9px]">En proceso</span>
+                            <span id="p-resumen-proceso" class="text-2xl font-black text-sky-300">0</span>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                            <span class="block text-slate-400 font-bold uppercase text-[9px]">Completados</span>
+                            <span id="p-resumen-completados" class="text-2xl font-black text-emerald-300">0</span>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                            <span class="block text-slate-400 font-bold uppercase text-[9px]">Carga hoy</span>
+                            <span id="p-resumen-hoy" class="text-2xl font-black text-indigo-300">0</span>
+                        </div>
+                    </div>
+
+                    <div id="p-admin-panel" class="hidden bg-slate-800 p-5 rounded-2xl border border-emerald-500/30 shadow-xl space-y-4">
+                        <div class="bg-slate-900/60 p-2 rounded-xl grid grid-cols-2 gap-2 text-xs">
+                            <button id="p-mode-list-btn" onclick="setPedidosMode('lista')" class="py-2 rounded-lg font-bold bg-emerald-600 text-white">Ver pedidos</button>
+                            <button id="p-mode-create-btn" onclick="setPedidosMode('crear')" class="py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Crear pedido</button>
+                            <button id="p-mode-clients-btn" onclick="setPedidosMode('clientes')" class="py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Clientes</button>
+                            <button id="p-mode-products-btn" onclick="setPedidosMode('productos')" class="py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Productos</button>
+                        </div>
+
+                        <div id="p-create-panel" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cliente / Código:</label>
+                                <select id="p-cliente-select" onchange="actualizarInfoClientePedido()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                            </div>
+                            <div id="p-cliente-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-300"></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Fecha de carga:</label>
+                                    <input type="date" id="p-fecha-carga" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Nota:</label>
+                                    <input type="text" id="p-nota" placeholder="Referencia opcional" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                </div>
+                            </div>
+
+                            <div class="border-t border-slate-700 pt-4 space-y-3">
+                                <h3 class="text-xs font-black text-emerald-300 uppercase">Detalle del armado</h3>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Módulo responsable:</label>
+                                    <select id="p-linea-area" onchange="renderProductosPedidoSelect()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                        <option value="">-- Seleccionar módulo --</option>
+                                        <option value="Empaque">Empaque</option>
+                                        <option value="Tamales">Tamales</option>
+                                        <option value="Planchas">Planchas</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Producto del cliente:</label>
+                                    <select id="p-linea-producto-cliente" onchange="actualizarInfoProductoPedido()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none"></select>
+                                </div>
+                                <div id="p-linea-producto-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-300"></div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cantidad de cajas:</label>
+                                    <input type="number" id="p-linea-cantidad" min="1" step="1" inputmode="numeric" placeholder="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                </div>
+                                <button onclick="agregarLineaPedido()" class="w-full bg-slate-700 text-white font-black py-3 rounded-xl text-xs uppercase">Agregar línea</button>
+                                <div id="p-lineas-form" class="space-y-2 text-xs"></div>
+                            </div>
+
+                            <button onclick="submitPedidoCliente()" class="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-sm uppercase shadow-lg shadow-emerald-900/30">Guardar pedido</button>
+                        </div>
+
+                        <div id="p-clientes-panel" class="hidden space-y-3">
+                            <h3 class="text-xs font-black text-emerald-300 uppercase">Catálogo de clientes</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="text" id="p-cliente-codigo-nuevo" placeholder="Código" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm uppercase outline-none">
+                                <input type="text" id="p-cliente-nombre-nuevo" placeholder="Nombre del cliente" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            </div>
+                            <button onclick="agregarClientePedido()" class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Agregar cliente</button>
+                            <div id="p-clientes-list" class="space-y-2 text-xs"></div>
+                        </div>
+
+                        <div id="p-products-panel" class="hidden space-y-5">
+                            <div class="space-y-3">
+                                <h3 class="text-xs font-black text-emerald-300 uppercase">Producto general</h3>
+                                <input type="text" id="p-producto-base-nombre" placeholder="Nombre base: Tamal dulce" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input type="text" id="p-producto-presentacion" placeholder="Presentación: 12x15 oz." class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                    <select id="p-producto-area" onchange="actualizarCampoBaseProduccionProducto()" class="px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                        <option value="">-- Área --</option>
+                                        <option value="Empaque">Empaque</option>
+                                        <option value="Tamales">Tamales</option>
+                                        <option value="Planchas">Planchas</option>
+                                    </select>
+                                </div>
+                                <div id="p-producto-base-wrapper" class="hidden">
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Fruta base:</label>
+                                    <select id="p-producto-base-produccion" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none"></select>
+                                </div>
+                                <div id="p-producto-unidad-wrapper" class="hidden">
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Unidad de la producción:</label>
+                                    <select id="p-producto-unidad" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                        <option value="">-- Seleccionar unidad --</option>
+                                        <option value="unidad">Unidad</option>
+                                        <option value="lb">Libra (lb)</option>
+                                        <option value="oz">Onza (oz)</option>
+                                        <option value="oz fl">Onza fluida (oz fl)</option>
+                                        <option value="kg">Kilogramo (kg)</option>
+                                        <option value="litro">Litro</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="p-producto-guardar-btn" onclick="agregarProductoGeneral()" class="bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Guardar producto</button>
+                                    <button id="p-producto-cancelar-btn" onclick="cancelarEdicionProducto()" class="hidden bg-slate-700 text-white font-black py-3 rounded-xl text-xs uppercase">Cancelar edición</button>
+                                </div>
+                                <button id="p-productos-toggle-btn" type="button" onclick="toggleProductosAdmin()" class="w-full bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs">Ver productos configurados</button>
+                                <div id="p-productos-list" class="hidden space-y-2 text-xs"></div>
+                            </div>
+
+                            <div class="border-t border-slate-700 pt-4 space-y-3">
+                                <h3 class="text-xs font-black text-cyan-300 uppercase">Nombre comercial por cliente</h3>
+                                <select id="p-producto-cliente-select" onchange="renderProductosClienteList()" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                                <select id="p-producto-general-select" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm"></select>
+                                <input type="text" id="p-producto-nombre-comercial" placeholder="Nombre mostrado para este cliente" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                                <button onclick="asignarProductoCliente()" class="w-full bg-cyan-600 text-white font-black py-3 rounded-xl text-xs uppercase">Asignar al cliente</button>
+                                <div id="p-productos-cliente-list" class="space-y-2 text-xs"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="p-cards-container" class="space-y-3"></div>
+                </section>
+
+        <section id="view-historial" class="app-view hidden space-y-4">
+            <div class="flex justify-between items-center">
+                <button onclick="switchView('tamales')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">Volver</button>
+                <h2 class="text-lg font-extrabold text-indigo-300">Historial</h2>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-700 rounded-2xl p-3 space-y-3">
+                <div id="historial-area-filters" class="flex flex-wrap gap-2"></div>
+                <div id="historial-estado-filters" class="flex flex-wrap gap-2"></div>
+            </div>
+
+
+            <div class="space-y-3 pt-2">
+                <div>
+                    <h2 class="text-sm font-black text-slate-100 uppercase">Lotes de Tamales</h2>
+                    <p class="text-[10px] text-slate-500">Produccion reportada, disponibilidad y uso en pedidos.</p>
+                </div>
+                <div id="tamales-history-container" class="history-grid"></div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-850 border-t border-slate-700 p-2 grid gap-1 z-50 shadow-2xl backdrop-blur-lg" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+        <button data-view-target="tamales" onclick="switchView('tamales')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">TAM</span><span class="text-[9px]">Reporte</span></button>
+        <button data-view-target="pedidos" onclick="switchView('pedidos')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">PED</span><span class="text-[9px]">Pedidos</span></button>
+        <button data-view-target="historial" onclick="switchView('historial')" class="flex flex-col items-center py-2 text-slate-400 font-bold"><span class="text-base">HIS</span><span class="text-[9px]">Historial</span></button>
+    </nav>
+    <script src="js/config.js?v=20260707-interfaces"></script>
+    <script src="js/context.js?v=20260707-interfaces"></script>
+    <script src="js/state.js?v=20260707-interfaces"></script>
+    <script src="js/api.js?v=20260707-interfaces"></script>
+    <script src="js/modules/produccion.js?v=20260707-interfaces"></script>
+    <script src="js/modules/tamales.js?v=20260707-interfaces"></script>
+    <script src="js/modules/pedidos.js?v=20260707-interfaces"></script>
+    <script src="js/modules/historial.js?v=20260707-interfaces"></script>
+    <script src="js/modules/admin.js?v=20260707-interfaces"></script>
+    <script src="js/app.js?v=20260707-interfaces"></script>
+</body>
+</html>
