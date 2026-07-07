@@ -59,3 +59,7 @@ function isProductionOnlyApp() {
 function appOrderArea() {
     return APP_CONFIG.orderArea || "";
 }
+
+function normalizarTextoFront(valor) {
+    return (valor || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+}
