@@ -12,312 +12,337 @@ function doGet(e) {
   if (cachedPayload) {
     return ContentService.createTextOutput(cachedPayload).setMimeType(ContentService.MimeType.JSON);
   }
+  var planLectura = crearPlanLecturaGet_(appContext, viewContext);
 
   // 1. Cargar Opciones del Catálogo
-  var sheetOpciones = ss.getSheetByName("Opciones");
-  if (sheetOpciones) {
-    var opts = sheetOpciones.getDataRange().getValues();
-    for (var i = 1; i < opts.length; i++) {
-      if (opts[i][0]) data.frutas.push(opts[i][0].toString());
+  if (planLectura.catalogoFrutas) {
+    var sheetOpciones = ss.getSheetByName("Opciones");
+    if (sheetOpciones) {
+      var opts = sheetOpciones.getDataRange().getValues();
+      for (var i = 1; i < opts.length; i++) {
+        if (opts[i][0]) data.frutas.push(opts[i][0].toString());
+      }
     }
   }
 
-  var sheetClientes = ss.getSheetByName("Clientes");
-  if (sheetClientes) {
-    var clientesData = sheetClientes.getDataRange().getValues();
-    for (var c = 1; c < clientesData.length; c++) {
-      data.clientes.push({
-        codigo: clientesData[c][0],
-        nombre: clientesData[c][1],
-        visibleApp: clientesData[c][2] || "SI",
-        idCliente: clientesData[c][3] || ""
-      });
+  if (planLectura.clientes) {
+    var sheetClientes = ss.getSheetByName("Clientes");
+    if (sheetClientes) {
+      var clientesData = sheetClientes.getDataRange().getValues();
+      for (var c = 1; c < clientesData.length; c++) {
+        data.clientes.push({
+          codigo: clientesData[c][0],
+          nombre: clientesData[c][1],
+          visibleApp: clientesData[c][2] || "SI",
+          idCliente: clientesData[c][3] || ""
+        });
+      }
     }
   }
 
-  var sheetProductos = ss.getSheetByName("Productos");
-  if (sheetProductos) {
-    var productosData = sheetProductos.getDataRange().getValues();
-    for (var pr = 1; pr < productosData.length; pr++) {
-      if (!productosData[pr][0]) continue;
-      data.productos.push({
-        idProducto: productosData[pr][0],
-        nombreBase: productosData[pr][1],
-        presentacion: productosData[pr][2],
-        area: productosData[pr][3],
-        productoBaseProduccion: productosData[pr][4],
-        visibleApp: productosData[pr][5] || "SI",
-        fechaCreacion: productosData[pr][6] || "",
-        unidadProduccion: productosData[pr][7] || (normalizarTexto_(productosData[pr][3]) === "empaque" ? "lb" : "unidad")
-      });
+  if (planLectura.productos) {
+    var sheetProductos = ss.getSheetByName("Productos");
+    if (sheetProductos) {
+      var productosData = sheetProductos.getDataRange().getValues();
+      for (var pr = 1; pr < productosData.length; pr++) {
+        if (!productosData[pr][0]) continue;
+        data.productos.push({
+          idProducto: productosData[pr][0],
+          nombreBase: productosData[pr][1],
+          presentacion: productosData[pr][2],
+          area: productosData[pr][3],
+          productoBaseProduccion: productosData[pr][4],
+          visibleApp: productosData[pr][5] || "SI",
+          fechaCreacion: productosData[pr][6] || "",
+          unidadProduccion: productosData[pr][7] || (normalizarTexto_(productosData[pr][3]) === "empaque" ? "lb" : "unidad")
+        });
+      }
     }
   }
 
-  var sheetProductosCliente = ss.getSheetByName("Productos_Cliente");
-  if (sheetProductosCliente) {
-    var productosClienteData = sheetProductosCliente.getDataRange().getValues();
-    for (var pcr = 1; pcr < productosClienteData.length; pcr++) {
-      if (!productosClienteData[pcr][0]) continue;
-      data.productosCliente.push({
-        idProductoCliente: productosClienteData[pcr][0],
-        idCliente: productosClienteData[pcr][1],
-        codigoCliente: productosClienteData[pcr][2],
-        idProducto: productosClienteData[pcr][3],
-        nombreComercial: productosClienteData[pcr][4],
-        visibleApp: productosClienteData[pcr][5] || "SI",
-        fechaCreacion: productosClienteData[pcr][6] || ""
-      });
+  if (planLectura.productosCliente) {
+    var sheetProductosCliente = ss.getSheetByName("Productos_Cliente");
+    if (sheetProductosCliente) {
+      var productosClienteData = sheetProductosCliente.getDataRange().getValues();
+      for (var pcr = 1; pcr < productosClienteData.length; pcr++) {
+        if (!productosClienteData[pcr][0]) continue;
+        data.productosCliente.push({
+          idProductoCliente: productosClienteData[pcr][0],
+          idCliente: productosClienteData[pcr][1],
+          codigoCliente: productosClienteData[pcr][2],
+          idProducto: productosClienteData[pcr][3],
+          nombreComercial: productosClienteData[pcr][4],
+          visibleApp: productosClienteData[pcr][5] || "SI",
+          fechaCreacion: productosClienteData[pcr][6] || ""
+        });
+      }
     }
   }
 
-  var sheetPedidosCliente = ss.getSheetByName("Pedidos_Cliente");
-  if (sheetPedidosCliente) {
-    var pedidosClienteData = sheetPedidosCliente.getDataRange().getValues();
-    for (var pc = 1; pc < pedidosClienteData.length; pc++) {
-      data.pedidosCliente.push({
-        idPedido: pedidosClienteData[pc][0],
-        fechaCreacion: pedidosClienteData[pc][1],
-        cliente: pedidosClienteData[pc][2],
-        codigoCliente: pedidosClienteData[pc][3],
-        fechaCarga: pedidosClienteData[pc][4],
-        estadoPedido: pedidosClienteData[pc][5],
-        visibleApp: pedidosClienteData[pc][6] || "SI",
-        nota: pedidosClienteData[pc][7] || "",
-        idPedidoTecnico: pedidosClienteData[pc][8] || "",
-        idCliente: pedidosClienteData[pc][9] || ""
-      });
+  if (planLectura.pedidos) {
+    var sheetPedidosCliente = ss.getSheetByName("Pedidos_Cliente");
+    if (sheetPedidosCliente) {
+      var pedidosClienteData = sheetPedidosCliente.getDataRange().getValues();
+      for (var pc = 1; pc < pedidosClienteData.length; pc++) {
+        data.pedidosCliente.push({
+          idPedido: pedidosClienteData[pc][0],
+          fechaCreacion: pedidosClienteData[pc][1],
+          cliente: pedidosClienteData[pc][2],
+          codigoCliente: pedidosClienteData[pc][3],
+          fechaCarga: pedidosClienteData[pc][4],
+          estadoPedido: pedidosClienteData[pc][5],
+          visibleApp: pedidosClienteData[pc][6] || "SI",
+          nota: pedidosClienteData[pc][7] || "",
+          idPedidoTecnico: pedidosClienteData[pc][8] || "",
+          idCliente: pedidosClienteData[pc][9] || ""
+        });
+      }
     }
   }
 
-  var sheetDetallePedidoCliente = ss.getSheetByName("Detalle_Pedido_Cliente");
-  if (sheetDetallePedidoCliente) {
-    var detallePedidoData = sheetDetallePedidoCliente.getDataRange().getValues();
-    for (var dp = 1; dp < detallePedidoData.length; dp++) {
-      data.detallePedidosCliente.push({
-        idPedido: detallePedidoData[dp][0],
-        area: detallePedidoData[dp][1],
-        producto: detallePedidoData[dp][2],
-        presentacion: detallePedidoData[dp][3],
-        unidad: detallePedidoData[dp][4],
-        cantidadPedida: numeroSeguro_(detallePedidoData[dp][5]),
-        cantidadCompletada: numeroSeguro_(detallePedidoData[dp][6]),
-        estadoDetalle: detallePedidoData[dp][7],
-        visibleApp: detallePedidoData[dp][8] || "SI",
-        nota: detallePedidoData[dp][9] || "",
-        idLinea: detallePedidoData[dp][10] || "",
-        idPedidoTecnico: detallePedidoData[dp][11] || "",
-        idProductoCliente: detallePedidoData[dp][12] || "",
-        idProducto: detallePedidoData[dp][13] || "",
-        productoBaseProduccion: detallePedidoData[dp][14] || detallePedidoData[dp][2]
-      });
+  if (planLectura.detallePedidos) {
+    var sheetDetallePedidoCliente = ss.getSheetByName("Detalle_Pedido_Cliente");
+    if (sheetDetallePedidoCliente) {
+      var detallePedidoData = sheetDetallePedidoCliente.getDataRange().getValues();
+      for (var dp = 1; dp < detallePedidoData.length; dp++) {
+        data.detallePedidosCliente.push({
+          idPedido: detallePedidoData[dp][0],
+          area: detallePedidoData[dp][1],
+          producto: detallePedidoData[dp][2],
+          presentacion: detallePedidoData[dp][3],
+          unidad: detallePedidoData[dp][4],
+          cantidadPedida: numeroSeguro_(detallePedidoData[dp][5]),
+          cantidadCompletada: numeroSeguro_(detallePedidoData[dp][6]),
+          estadoDetalle: detallePedidoData[dp][7],
+          visibleApp: detallePedidoData[dp][8] || "SI",
+          nota: detallePedidoData[dp][9] || "",
+          idLinea: detallePedidoData[dp][10] || "",
+          idPedidoTecnico: detallePedidoData[dp][11] || "",
+          idProductoCliente: detallePedidoData[dp][12] || "",
+          idProducto: detallePedidoData[dp][13] || "",
+          productoBaseProduccion: detallePedidoData[dp][14] || detallePedidoData[dp][2]
+        });
+      }
     }
   }
 
   var metricasPorPedido = {};
-  var sheetKPIResumen = ss.getSheetByName("Control_Materia_Prima");
-  if (sheetKPIResumen) {
-    var kpiResumenData = sheetKPIResumen.getDataRange().getValues();
-    var kpiHeaders = kpiResumenData[0] || [];
-    var kpiIdCol = buscarColumna_(kpiHeaders, ["ID", "IdPedido", "idPedido"]);
-    var kpiPesoCol = buscarColumna_(kpiHeaders, ["Total_Peso_Procesado_Lb", "Total Peso Procesado Lb", "Peso_Procesado", "Peso Procesado"]);
-    var kpiCajasCol = buscarColumna_(kpiHeaders, ["Total_Cajas", "Cajas", "Cajas_Procesadas", "Cajas Procesadas"]);
-    if (kpiIdCol === -1) kpiIdCol = 0;
-    if (kpiPesoCol === -1) kpiPesoCol = 3;
-    if (kpiCajasCol === -1) kpiCajasCol = 4;
-    for (var kr = 1; kr < kpiResumenData.length; kr++) {
-      var idKPI = kpiResumenData[kr][kpiIdCol];
-      if (idKPI) {
-        metricasPorPedido[idKPI] = {
-          pesoProcesado: numeroSeguro_(kpiResumenData[kr][kpiPesoCol]),
-          cajasProcesadas: numeroSeguro_(kpiResumenData[kr][kpiCajasCol])
+  if (planLectura.frutas) {
+    var sheetKPIResumen = ss.getSheetByName("Control_Materia_Prima");
+    if (sheetKPIResumen) {
+      var kpiResumenData = sheetKPIResumen.getDataRange().getValues();
+      var kpiHeaders = kpiResumenData[0] || [];
+      var kpiIdCol = buscarColumna_(kpiHeaders, ["ID", "IdPedido", "idPedido"]);
+      var kpiPesoCol = buscarColumna_(kpiHeaders, ["Total_Peso_Procesado_Lb", "Total Peso Procesado Lb", "Peso_Procesado", "Peso Procesado"]);
+      var kpiCajasCol = buscarColumna_(kpiHeaders, ["Total_Cajas", "Cajas", "Cajas_Procesadas", "Cajas Procesadas"]);
+      if (kpiIdCol === -1) kpiIdCol = 0;
+      if (kpiPesoCol === -1) kpiPesoCol = 3;
+      if (kpiCajasCol === -1) kpiCajasCol = 4;
+      for (var kr = 1; kr < kpiResumenData.length; kr++) {
+        var idKPI = kpiResumenData[kr][kpiIdCol];
+        if (idKPI) {
+          metricasPorPedido[idKPI] = {
+            pesoProcesado: numeroSeguro_(kpiResumenData[kr][kpiPesoCol]),
+            cajasProcesadas: numeroSeguro_(kpiResumenData[kr][kpiCajasCol])
+          };
+        }
+      }
+    }
+
+    // 2. Cargar Pedidos para Historial, Empaque y Retomar
+    var sheetFrutas = ss.getSheetByName("Pedidos_Fruta");
+    if (sheetFrutas) {
+      var frutasData = sheetFrutas.getDataRange().getValues();
+      for (var j = 1; j < frutasData.length; j++) {
+        var row = frutasData[j];
+        var metricas = metricasPorPedido[row[0]] || {};
+        var pesoEntradaHistorial = numeroSeguro_(row[5]);
+        var pesoKPI = numeroSeguro_(metricas.pesoProcesado);
+        var pesoFinal = numeroSeguro_(row[6]);
+        var pesoProcesado = pesoProcesadoValido_(pesoEntradaHistorial, pesoKPI) ? pesoKPI : 0;
+        if (!pesoProcesado && pesoProcesadoValido_(pesoEntradaHistorial, pesoFinal)) pesoProcesado = pesoFinal;
+        var p = {
+          id: row[0], fecha: row[1], nombre: row[2], proveedorIniciales: row[3], fruta: row[4],
+          pesoEntrada: row[5],
+          pesoProcesado: pesoProcesado,
+          cajasProcesadas: numeroEnteroSeguro_(metricas.cajasProcesadas),
+          rendimientoPeso: row[7],
+          estadoFrutas: row[8],
+          estadoEmpaqueGlobal: row[12],
+          visibleApp: row[13],
+          pesoDisponibleEmpaque: row[14] !== "" && typeof row[14] !== "undefined" ? numeroSeguro_(row[14]) : pesoProcesado,
+          idLoteTecnico: row[15] || ""
         };
+        
+        data.historial.push(p);
+
+        if (p.visibleApp === "SI" && p.estadoFrutas === "Finalizado" && p.estadoEmpaqueGlobal !== "Empacado Total") {
+          data.pedidosPendientes.push(p);
+        }
+        if (p.visibleApp === "SI" && (p.estadoFrutas === "En proceso" || p.estadoFrutas === "Pausado")) {
+          data.pedidosParciales.push(p);
+        }
       }
     }
   }
 
-  // 2. Cargar Pedidos para Historial, Empaque y Retomar
-  var sheetFrutas = ss.getSheetByName("Pedidos_Fruta");
-  if (sheetFrutas) {
-    var frutasData = sheetFrutas.getDataRange().getValues();
-    for (var j = 1; j < frutasData.length; j++) {
-      var row = frutasData[j];
-      var metricas = metricasPorPedido[row[0]] || {};
-      var pesoEntradaHistorial = numeroSeguro_(row[5]);
-      var pesoKPI = numeroSeguro_(metricas.pesoProcesado);
-      var pesoFinal = numeroSeguro_(row[6]);
-      var pesoProcesado = pesoProcesadoValido_(pesoEntradaHistorial, pesoKPI) ? pesoKPI : 0;
-      if (!pesoProcesado && pesoProcesadoValido_(pesoEntradaHistorial, pesoFinal)) pesoProcesado = pesoFinal;
-      var p = {
-        id: row[0], fecha: row[1], nombre: row[2], proveedorIniciales: row[3], fruta: row[4],
-        pesoEntrada: row[5],
-        pesoProcesado: pesoProcesado,
-        cajasProcesadas: numeroEnteroSeguro_(metricas.cajasProcesadas),
-        rendimientoPeso: row[7],
-        estadoFrutas: row[8],
-        estadoEmpaqueGlobal: row[12],
-        visibleApp: row[13],
-        pesoDisponibleEmpaque: row[14] !== "" && typeof row[14] !== "undefined" ? numeroSeguro_(row[14]) : pesoProcesado,
-        idLoteTecnico: row[15] || ""
-      };
-      
-      data.historial.push(p);
-
-      if (p.visibleApp === "SI" && p.estadoFrutas === "Finalizado" && p.estadoEmpaqueGlobal !== "Empacado Total") {
-        data.pedidosPendientes.push(p);
-      }
-      if (p.visibleApp === "SI" && (p.estadoFrutas === "En proceso" || p.estadoFrutas === "Pausado")) {
-        data.pedidosParciales.push(p);
+  if (planLectura.inventario) {
+    var sheetInventario = ss.getSheetByName("Inventario_Bodega");
+    if (sheetInventario) {
+      var invData = sheetInventario.getDataRange().getValues();
+      for (var b = 1; b < invData.length; b++) {
+        var invRow = invData[b];
+        data.inventarioBodega.push({
+          id: invRow[0],
+          nombre: invRow[1],
+          categoria: invRow[2],
+          unidad: invRow[3],
+          stock: Number(invRow[4]) || 0,
+          updatedAt: invRow[5],
+          visibleApp: invRow[6] || "SI",
+          idItemTecnico: invRow[7] || ""
+        });
       }
     }
   }
 
-  var sheetInventario = ss.getSheetByName("Inventario_Bodega");
-  if (sheetInventario) {
-    var invData = sheetInventario.getDataRange().getValues();
-    for (var b = 1; b < invData.length; b++) {
-      var invRow = invData[b];
-      data.inventarioBodega.push({
-        id: invRow[0],
-        nombre: invRow[1],
-        categoria: invRow[2],
-        unidad: invRow[3],
-        stock: Number(invRow[4]) || 0,
-        updatedAt: invRow[5],
-        visibleApp: invRow[6] || "SI",
-        idItemTecnico: invRow[7] || ""
-      });
+  if (planLectura.movimientosBodega) {
+    var sheetMovimientos = ss.getSheetByName("Movimientos_Bodega");
+    if (sheetMovimientos) {
+      var movData = sheetMovimientos.getDataRange().getValues();
+      var inicioMov = Math.max(1, movData.length - 50);
+      for (var mb = inicioMov; mb < movData.length; mb++) {
+        var movRow = movData[mb];
+        data.movimientosBodega.push({
+          fecha: movRow[0],
+          tipoMovimiento: movRow[1],
+          idItem: movRow[2],
+          nombreItem: movRow[3],
+          cantidad: Number(movRow[6]) || 0,
+          stockAnterior: Number(movRow[7]) || 0,
+          stockNuevo: Number(movRow[8]) || 0,
+          responsable: movRow[9],
+          nota: movRow[10],
+          idMovimiento: movRow[11] || ""
+        });
+      }
     }
   }
 
-  var sheetMovimientos = ss.getSheetByName("Movimientos_Bodega");
-  if (sheetMovimientos) {
-    var movData = sheetMovimientos.getDataRange().getValues();
-    var inicioMov = Math.max(1, movData.length - 50);
-    for (var mb = inicioMov; mb < movData.length; mb++) {
-      var movRow = movData[mb];
-      data.movimientosBodega.push({
-        fecha: movRow[0],
-        tipoMovimiento: movRow[1],
-        idItem: movRow[2],
-        nombreItem: movRow[3],
-        cantidad: Number(movRow[6]) || 0,
-        stockAnterior: Number(movRow[7]) || 0,
-        stockNuevo: Number(movRow[8]) || 0,
-        responsable: movRow[9],
-        nota: movRow[10],
-        idMovimiento: movRow[11] || ""
-      });
+  if (planLectura.produccion) {
+    var sheetProduccionAreas = ss.getSheetByName("Produccion_Areas");
+    if (sheetProduccionAreas) {
+      var produccionData = sheetProduccionAreas.getDataRange().getValues();
+      for (var pa = 1; pa < produccionData.length; pa++) {
+        if (!produccionData[pa][0]) continue;
+        data.produccionesAreas.push({
+          idProduccion: produccionData[pa][0],
+          codigoProduccion: produccionData[pa][1],
+          fecha: produccionData[pa][2],
+          area: produccionData[pa][3],
+          idCliente: produccionData[pa][4],
+          codigoCliente: produccionData[pa][5],
+          cliente: produccionData[pa][6],
+          idProducto: produccionData[pa][7],
+          idProductoCliente: produccionData[pa][8],
+          producto: produccionData[pa][9],
+          presentacion: produccionData[pa][10],
+          unidadesFuncionales: numeroSeguro_(produccionData[pa][11]),
+          unidadesAveria: numeroSeguro_(produccionData[pa][12]),
+          totalFisico: numeroSeguro_(produccionData[pa][13]),
+          funcionalesDisponibles: numeroSeguro_(produccionData[pa][14]),
+          averiaDisponible: numeroSeguro_(produccionData[pa][15]),
+          estadoDisponibilidad: produccionData[pa][16] || "Disponible",
+          responsable: produccionData[pa][17] || "",
+          nota: produccionData[pa][18] || "",
+          visibleApp: produccionData[pa][19] || "SI",
+          unidadMedida: produccionData[pa][20] || "unidad",
+          cantidadDisponible: produccionData[pa][21] !== "" && typeof produccionData[pa][21] !== "undefined"
+            ? numeroSeguro_(produccionData[pa][21])
+            : numeroSeguro_(produccionData[pa][14]) + numeroSeguro_(produccionData[pa][15])
+        });
+      }
     }
   }
 
-  var sheetProduccionAreas = ss.getSheetByName("Produccion_Areas");
-  if (sheetProduccionAreas) {
-    var produccionData = sheetProduccionAreas.getDataRange().getValues();
-    for (var pa = 1; pa < produccionData.length; pa++) {
-      if (!produccionData[pa][0]) continue;
-      data.produccionesAreas.push({
-        idProduccion: produccionData[pa][0],
-        codigoProduccion: produccionData[pa][1],
-        fecha: produccionData[pa][2],
-        area: produccionData[pa][3],
-        idCliente: produccionData[pa][4],
-        codigoCliente: produccionData[pa][5],
-        cliente: produccionData[pa][6],
-        idProducto: produccionData[pa][7],
-        idProductoCliente: produccionData[pa][8],
-        producto: produccionData[pa][9],
-        presentacion: produccionData[pa][10],
-        unidadesFuncionales: numeroSeguro_(produccionData[pa][11]),
-        unidadesAveria: numeroSeguro_(produccionData[pa][12]),
-        totalFisico: numeroSeguro_(produccionData[pa][13]),
-        funcionalesDisponibles: numeroSeguro_(produccionData[pa][14]),
-        averiaDisponible: numeroSeguro_(produccionData[pa][15]),
-        estadoDisponibilidad: produccionData[pa][16] || "Disponible",
-        responsable: produccionData[pa][17] || "",
-        nota: produccionData[pa][18] || "",
-        visibleApp: produccionData[pa][19] || "SI",
-        unidadMedida: produccionData[pa][20] || "unidad",
-        cantidadDisponible: produccionData[pa][21] !== "" && typeof produccionData[pa][21] !== "undefined"
-          ? numeroSeguro_(produccionData[pa][21])
-          : numeroSeguro_(produccionData[pa][14]) + numeroSeguro_(produccionData[pa][15])
-      });
+  if (planLectura.sesiones) {
+    var sheetEmpaqueSesiones = ss.getSheetByName("Empaque_Sesiones");
+    if (sheetEmpaqueSesiones) {
+      var sesionesData = sheetEmpaqueSesiones.getDataRange().getValues();
+      for (var se = 1; se < sesionesData.length; se++) {
+        var cajasSesion = numeroEnteroSeguro_(sesionesData[se][9]);
+        var presentacionSesion = numeroSeguro_(sesionesData[se][10]);
+        data.empaqueSesiones.push({
+          idSesion: sesionesData[se][0],
+          fecha: sesionesData[se][1],
+          idPedido: sesionesData[se][2],
+          cliente: sesionesData[se][3],
+          codigoCliente: sesionesData[se][4],
+          area: sesionesData[se][5],
+          producto: sesionesData[se][6],
+          presentacion: sesionesData[se][7],
+          unidad: sesionesData[se][8],
+          cajasHechas: cajasSesion,
+          presentacionLb: presentacionSesion,
+          pesoEmpacadoLb: cajasSesion * presentacionSesion,
+          idLoteFruta: sesionesData[se][11],
+          fruta: sesionesData[se][12],
+          estadoUsoLote: sesionesData[se][13],
+          sobranteLoteLb: numeroSeguro_(sesionesData[se][14]),
+          responsable: sesionesData[se][15] || "",
+          nota: sesionesData[se][16] || "",
+          estadoRegistro: sesionesData[se][17] || "Activa",
+          fechaReversion: sesionesData[se][18] || "",
+          motivoReversion: sesionesData[se][19] || "",
+          idLinea: sesionesData[se][20] || "",
+          idAsignacion: sesionesData[se][21] || "",
+          idLoteTecnico: sesionesData[se][22] || "",
+          idPedidoTecnico: sesionesData[se][23] || "",
+          tipoFuente: sesionesData[se][24] || (sesionesData[se][11] ? "Fruta" : ""),
+          idProduccion: sesionesData[se][25] || "",
+          codigoProduccion: sesionesData[se][26] || "",
+          categoriaUnidades: sesionesData[se][27] || "",
+          unidadesPorCaja: numeroSeguro_(sesionesData[se][28]),
+          unidadesConsumidas: numeroSeguro_(sesionesData[se][29]),
+          cantidadPorCaja: numeroSeguro_(sesionesData[se][30] || sesionesData[se][28] || sesionesData[se][10]),
+          cantidadFuenteAnterior: numeroSeguro_(sesionesData[se][31]),
+          cantidadFuenteSobrante: numeroSeguro_(sesionesData[se][32]),
+          cantidadFuenteConsumida: numeroSeguro_(sesionesData[se][33] || sesionesData[se][29]),
+          unidadFuente: sesionesData[se][34] || (sesionesData[se][11] ? "lb" : "unidad"),
+          idProductoFuente: sesionesData[se][35] || "",
+          idProductoDestino: sesionesData[se][36] || ""
+        });
+      }
     }
   }
 
-  var sheetEmpaqueSesiones = ss.getSheetByName("Empaque_Sesiones");
-  if (sheetEmpaqueSesiones) {
-    var sesionesData = sheetEmpaqueSesiones.getDataRange().getValues();
-    for (var se = 1; se < sesionesData.length; se++) {
-      var cajasSesion = numeroEnteroSeguro_(sesionesData[se][9]);
-      var presentacionSesion = numeroSeguro_(sesionesData[se][10]);
-      data.empaqueSesiones.push({
-        idSesion: sesionesData[se][0],
-        fecha: sesionesData[se][1],
-        idPedido: sesionesData[se][2],
-        cliente: sesionesData[se][3],
-        codigoCliente: sesionesData[se][4],
-        area: sesionesData[se][5],
-        producto: sesionesData[se][6],
-        presentacion: sesionesData[se][7],
-        unidad: sesionesData[se][8],
-        cajasHechas: cajasSesion,
-        presentacionLb: presentacionSesion,
-        pesoEmpacadoLb: cajasSesion * presentacionSesion,
-        idLoteFruta: sesionesData[se][11],
-        fruta: sesionesData[se][12],
-        estadoUsoLote: sesionesData[se][13],
-        sobranteLoteLb: numeroSeguro_(sesionesData[se][14]),
-        responsable: sesionesData[se][15] || "",
-        nota: sesionesData[se][16] || "",
-        estadoRegistro: sesionesData[se][17] || "Activa",
-        fechaReversion: sesionesData[se][18] || "",
-        motivoReversion: sesionesData[se][19] || "",
-        idLinea: sesionesData[se][20] || "",
-        idAsignacion: sesionesData[se][21] || "",
-        idLoteTecnico: sesionesData[se][22] || "",
-        idPedidoTecnico: sesionesData[se][23] || "",
-        tipoFuente: sesionesData[se][24] || (sesionesData[se][11] ? "Fruta" : ""),
-        idProduccion: sesionesData[se][25] || "",
-        codigoProduccion: sesionesData[se][26] || "",
-        categoriaUnidades: sesionesData[se][27] || "",
-        unidadesPorCaja: numeroSeguro_(sesionesData[se][28]),
-        unidadesConsumidas: numeroSeguro_(sesionesData[se][29]),
-        cantidadPorCaja: numeroSeguro_(sesionesData[se][30] || sesionesData[se][28] || sesionesData[se][10]),
-        cantidadFuenteAnterior: numeroSeguro_(sesionesData[se][31]),
-        cantidadFuenteSobrante: numeroSeguro_(sesionesData[se][32]),
-        cantidadFuenteConsumida: numeroSeguro_(sesionesData[se][33] || sesionesData[se][29]),
-        unidadFuente: sesionesData[se][34] || (sesionesData[se][11] ? "lb" : "unidad"),
-        idProductoFuente: sesionesData[se][35] || "",
-        idProductoDestino: sesionesData[se][36] || ""
-      });
-    }
-  }
-
-  var sheetAsignaciones = ss.getSheetByName("Asignaciones_Pedido");
-  if (sheetAsignaciones) {
-    var asignacionesData = sheetAsignaciones.getDataRange().getValues();
-    for (var ap = 1; ap < asignacionesData.length; ap++) {
-      if (!asignacionesData[ap][0]) continue;
-      data.asignacionesPedido.push({
-        idAsignacion: asignacionesData[ap][0],
-        fecha: asignacionesData[ap][1],
-        idPedidoTecnico: asignacionesData[ap][2],
-        idLinea: asignacionesData[ap][3],
-        idLoteTecnico: asignacionesData[ap][4],
-        idSesion: asignacionesData[ap][5],
-        area: asignacionesData[ap][6],
-        cantidad: numeroSeguro_(asignacionesData[ap][7]),
-        unidad: asignacionesData[ap][8],
-        estadoAsignacion: asignacionesData[ap][9] || "Activa",
-        fechaReversion: asignacionesData[ap][10] || "",
-        motivoReversion: asignacionesData[ap][11] || "",
-        idPedidoVisible: asignacionesData[ap][12] || "",
-        idLoteVisible: asignacionesData[ap][13] || "",
-        cantidadFuenteConsumida: numeroSeguro_(asignacionesData[ap][14]),
-        unidadFuente: asignacionesData[ap][15] || "",
-        idProductoFuente: asignacionesData[ap][16] || "",
-        idProductoDestino: asignacionesData[ap][17] || ""
-      });
+  if (planLectura.asignaciones) {
+    var sheetAsignaciones = ss.getSheetByName("Asignaciones_Pedido");
+    if (sheetAsignaciones) {
+      var asignacionesData = sheetAsignaciones.getDataRange().getValues();
+      for (var ap = 1; ap < asignacionesData.length; ap++) {
+        if (!asignacionesData[ap][0]) continue;
+        data.asignacionesPedido.push({
+          idAsignacion: asignacionesData[ap][0],
+          fecha: asignacionesData[ap][1],
+          idPedidoTecnico: asignacionesData[ap][2],
+          idLinea: asignacionesData[ap][3],
+          idLoteTecnico: asignacionesData[ap][4],
+          idSesion: asignacionesData[ap][5],
+          area: asignacionesData[ap][6],
+          cantidad: numeroSeguro_(asignacionesData[ap][7]),
+          unidad: asignacionesData[ap][8],
+          estadoAsignacion: asignacionesData[ap][9] || "Activa",
+          fechaReversion: asignacionesData[ap][10] || "",
+          motivoReversion: asignacionesData[ap][11] || "",
+          idPedidoVisible: asignacionesData[ap][12] || "",
+          idLoteVisible: asignacionesData[ap][13] || "",
+          cantidadFuenteConsumida: numeroSeguro_(asignacionesData[ap][14]),
+          unidadFuente: asignacionesData[ap][15] || "",
+          idProductoFuente: asignacionesData[ap][16] || "",
+          idProductoDestino: asignacionesData[ap][17] || ""
+        });
+      }
     }
   }
 
@@ -325,6 +350,98 @@ function doGet(e) {
   var jsonPayloadGet = JSON.stringify(payloadGet);
   guardarCacheGet_(cacheKey, jsonPayloadGet, viewContext, estadoContext);
   return ContentService.createTextOutput(jsonPayloadGet).setMimeType(ContentService.MimeType.JSON);
+}
+
+function crearPlanLecturaGet_(appContext, viewContext) {
+  var contexto = normalizarTexto_(appContext || "");
+  var view = normalizarTexto_(viewContext || "full");
+  var full = view === "full" || (!contexto && view === "main");
+  var plan = {
+    catalogoFrutas: false,
+    clientes: false,
+    productos: false,
+    productosCliente: false,
+    pedidos: false,
+    detallePedidos: false,
+    frutas: false,
+    inventario: false,
+    movimientosBodega: false,
+    produccion: false,
+    sesiones: false,
+    asignaciones: false
+  };
+
+  function activarTodo() {
+    Object.keys(plan).forEach(function(key) { plan[key] = true; });
+    return plan;
+  }
+
+  if (full) return activarTodo();
+
+  var esFrutasEmpaque = contexto === "frutas-empaque" || contexto === "frutasempaque";
+  var esProduccion = contexto === "planchas" || contexto === "plancha" || contexto === "tamales" || contexto === "tamal";
+  if (!esFrutasEmpaque && !esProduccion) return activarTodo();
+
+  if (esFrutasEmpaque) {
+    if (view === "main") {
+      plan.catalogoFrutas = true;
+      plan.frutas = true;
+      return plan;
+    }
+    if (view === "empaque") {
+      plan.catalogoFrutas = true;
+      plan.productos = true;
+      plan.productosCliente = true;
+      plan.pedidos = true;
+      plan.detallePedidos = true;
+      plan.frutas = true;
+      plan.produccion = true;
+      return plan;
+    }
+    if (view === "pedidos") {
+      plan.catalogoFrutas = true;
+      plan.clientes = true;
+      plan.productos = true;
+      plan.productosCliente = true;
+      plan.pedidos = true;
+      plan.detallePedidos = true;
+      return plan;
+    }
+    if (view === "historial") {
+      plan.frutas = true;
+      plan.produccion = true;
+      plan.sesiones = true;
+      plan.asignaciones = true;
+      return plan;
+    }
+  }
+
+  if (esProduccion) {
+    if (view === "main") {
+      plan.clientes = true;
+      plan.productos = true;
+      plan.productosCliente = true;
+      plan.produccion = true;
+      return plan;
+    }
+    if (view === "pedidos") {
+      plan.catalogoFrutas = true;
+      plan.clientes = true;
+      plan.productos = true;
+      plan.productosCliente = true;
+      plan.pedidos = true;
+      plan.detallePedidos = true;
+      return plan;
+    }
+    if (view === "historial") {
+      plan.produccion = true;
+      plan.sesiones = true;
+      plan.asignaciones = true;
+      return plan;
+    }
+  }
+
+  return activarTodo();
 }
 
 function filtrarDataPorApp_(data, appContext, viewContext, estadoContext, limitContext) {
@@ -477,7 +594,7 @@ function loteCompletadoProduccion_(lote) {
 
 function crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext) {
   return [
-    "mes-v2",
+    "mes-v3",
     normalizarTexto_(appContext || "full"),
     normalizarTexto_(viewContext || "main"),
     normalizarTexto_(estadoContext || "todos"),
