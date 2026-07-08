@@ -1,6 +1,16 @@
+function dataViewEstadoDefault(viewName, options = {}) {
+    return options.estado || (viewName === "historial" ? historialEstadoFiltro : "todos");
+}
+
+function dataViewLimitDefault(viewName, estado, options = {}) {
+    if (typeof options.limit !== "undefined") return options.limit;
+    if (viewName !== "historial") return "";
+    return estado === "completados" ? 100 : 50;
+}
+
 function dataViewCacheKey(viewName, options = {}) {
-    const estado = options.estado || (viewName === "historial" ? historialEstadoFiltro : "activos");
-    const limit = options.limit || (viewName === "historial" ? 50 : "");
+    const estado = dataViewEstadoDefault(viewName, options);
+    const limit = dataViewLimitDefault(viewName, estado, options);
     return `${viewName}:${estado}:${limit}`;
 }
 
@@ -57,10 +67,12 @@ function fetchDataView(viewName = "main", options = {}) {
     }
 
     document.getElementById("global-status").innerText = "Sincronizando...";
+    const estado = dataViewEstadoDefault(viewName, options);
+    const limit = dataViewLimitDefault(viewName, estado, options);
     const params = {
         view: viewName,
-        estado: options.estado || (viewName === "historial" ? historialEstadoFiltro : "activos"),
-        limit: options.limit || (viewName === "historial" ? 50 : "")
+        estado,
+        limit
     };
     const baseUrl = typeof appApiUrl === "function" ? appApiUrl(params) : GOOGLE_SHEETS_URL;
     const cacheBust = baseUrl.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;

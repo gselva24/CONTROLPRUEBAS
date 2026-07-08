@@ -5,7 +5,7 @@ function doGet(e) {
   var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], productos: [], productosCliente: [], pedidosCliente: [], detallePedidosCliente: [], asignacionesPedido: [], empaqueSesiones: [], produccionesAreas: [] };
   var appContext = e && e.parameter ? (e.parameter.app || "") : "";
   var viewContext = e && e.parameter ? (e.parameter.view || "main") : "main";
-  var estadoContext = e && e.parameter ? (e.parameter.estado || "activos") : "activos";
+  var estadoContext = e && e.parameter ? (e.parameter.estado || "todos") : "todos";
   var limitContext = e && e.parameter ? numeroEnteroSeguro_(e.parameter.limit) : 0;
   var cacheKey = crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext);
   var cachedPayload = leerCacheGet_(cacheKey);
@@ -332,7 +332,7 @@ function filtrarDataPorApp_(data, appContext, viewContext, estadoContext, limitC
   var filtrado = JSON.parse(JSON.stringify(data));
   filtrado.appContext = appContext || "full";
   filtrado.viewContext = viewContext || "main";
-  filtrado.estadoContext = estadoContext || "activos";
+  filtrado.estadoContext = estadoContext || "todos";
 
   if (contexto === "frutas-empaque" || contexto === "frutasempaque") {
     filtrado.inventarioBodega = [];
@@ -398,12 +398,9 @@ function filtrarDataPorApp_(data, appContext, viewContext, estadoContext, limitC
 
 function filtrarDataPorVista_(data, viewContext, estadoContext, limitContext) {
   var view = normalizarTexto_(viewContext || "main");
-  var estado = normalizarTexto_(estadoContext || "activos");
+  var estado = normalizarTexto_(estadoContext || "todos");
   var limit = Math.max(0, numeroEnteroSeguro_(limitContext));
   var filtrado = JSON.parse(JSON.stringify(data));
-
-  filtrarPorEstadoOperativo_(filtrado, estado);
-  if (limit > 0) aplicarLimitHistorial_(filtrado, limit);
 
   if (view === "main") {
     delete filtrado.pedidosCliente;
@@ -436,6 +433,8 @@ function filtrarDataPorVista_(data, viewContext, estadoContext, limitContext) {
   }
 
   if (view === "historial") {
+    filtrarPorEstadoOperativo_(filtrado, estado);
+    if (limit > 0) aplicarLimitHistorial_(filtrado, limit);
     delete filtrado.frutas;
     delete filtrado.clientes;
     delete filtrado.productos;
@@ -461,15 +460,6 @@ function filtrarPorEstadoOperativo_(data, estado) {
   data.produccionesAreas = (data.produccionesAreas || []).filter(function(lote) {
     return loteCompletadoProduccion_(lote) === quiereCompletados;
   });
-  data.pedidosCliente = (data.pedidosCliente || []).filter(function(pedido) {
-    var completado = pedido.estadoPedido === "Completado" || pedido.estadoPedido === "Cancelado";
-    return completado === quiereCompletados;
-  });
-  var pedidosPermitidos = {};
-  data.pedidosCliente.forEach(function(pedido) { pedidosPermitidos[pedido.idPedido] = true; });
-  data.detallePedidosCliente = (data.detallePedidosCliente || []).filter(function(detalle) {
-    return pedidosPermitidos[detalle.idPedido];
-  });
 }
 
 function aplicarLimitHistorial_(data, limit) {
@@ -487,10 +477,10 @@ function loteCompletadoProduccion_(lote) {
 
 function crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext) {
   return [
-    "mes-v1",
+    "mes-v2",
     normalizarTexto_(appContext || "full"),
     normalizarTexto_(viewContext || "main"),
-    normalizarTexto_(estadoContext || "activos"),
+    normalizarTexto_(estadoContext || "todos"),
     String(limitContext || 0)
   ].join(":").slice(0, 240);
 }
