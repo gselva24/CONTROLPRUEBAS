@@ -639,6 +639,23 @@ function limpiarCacheMes_() {
   } catch (err) {}
 }
 
+function registrarBitacoraAccion_(ss, datos) {
+  try {
+    var sheetBitacora = getOrCreateSheet_(ss, "Bitacora_Acciones", ["FechaHora", "Modulo", "Accion", "ID_Principal", "ID_Tecnico", "Responsable", "Resultado", "Detalle_JSON", "Nota"]);
+    sheetBitacora.appendRow([
+      datos.fechaHora || new Date(),
+      datos.modulo || "",
+      datos.accion || "",
+      datos.idPrincipal || "",
+      datos.idTecnico || "",
+      datos.responsable || "",
+      datos.resultado || "success",
+      datos.detalle ? JSON.stringify(datos.detalle) : "",
+      datos.nota || ""
+    ]);
+  } catch (err) {}
+}
+
 function doPost(e) {
   // Validación de seguridad: Si no hay datos, terminar inmediatamente
   if (typeof e === 'undefined' || !e.postData) {
@@ -1026,8 +1043,10 @@ function doPost(e) {
       var sheetTNuevo = getOrCreateSheet_(ss, "Tiempos_Procesado", ["ID", "Nombre_Pedido", "Fruta", "FechaHora_Inicio", "FechaHora_Finalizacion", "Tiempo_Total_Min", "Tiempo_Pausado_Min", "Tiempo_Produccion_Min", "Motivo_Pausa", "Pausa_Activa_Desde", "ID_Sesion_Produccion"]);
       var pesoEntradaNuevo = numeroSeguro_(params.pesoEntrada);
       var proveedorIniciales = (params.proveedorIniciales || "").toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      var responsableInicioFrutas = (params.responsable || "").toString().trim();
       if (!params.nombrePedido) return json_(false, "Ingrese el nombre del pedido.");
       if (!proveedorIniciales) return json_(false, "Ingrese las iniciales del proveedor.");
+      if (!responsableInicioFrutas) return json_(false, "Ingrese el responsable.");
       if (!pesoEntradaNuevo || pesoEntradaNuevo <= 0) return json_(false, "El peso de entrada debe ser mayor a cero.");
 
       var idNuevo = crearIdFrutaProveedor_(ss, proveedorIniciales);
@@ -1036,12 +1055,28 @@ function doPost(e) {
       var idSesionProduccion = crearUuid_();
       sheetFNuevo.appendRow([idNuevo, params.fecha || Utilities.formatDate(ahoraInicio, Session.getScriptTimeZone(), "dd/MM/yyyy"), params.nombrePedido, proveedorIniciales, params.frutaTipo, pesoEntradaNuevo, "", "", "En proceso", "", "", "", "Pendiente", "SI", "", idLoteTecnicoNuevo]);
       sheetTNuevo.appendRow([idNuevo, params.nombrePedido, params.frutaTipo, ahoraInicio, "", 0, 0, 0, "", "", idSesionProduccion]);
+      registrarBitacoraAccion_(ss, {
+        fechaHora: ahoraInicio,
+        modulo: "Frutas",
+        accion: "Iniciar lote",
+        idPrincipal: idNuevo,
+        idTecnico: idLoteTecnicoNuevo,
+        responsable: responsableInicioFrutas,
+        detalle: {
+          fruta: params.frutaTipo,
+          proveedorIniciales: proveedorIniciales,
+          pesoEntradaLb: pesoEntradaNuevo,
+          idSesionProduccion: idSesionProduccion
+        }
+      });
       return ContentService.createTextOutput(JSON.stringify({status: "success", newId: idNuevo, idLoteTecnico: idLoteTecnicoNuevo, idSesionProduccion: idSesionProduccion})).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (params.action === "pausarLoteFrutas") {
       var sheetFPausa = ss.getSheetByName("Pedidos_Fruta");
       var sheetTPausa = ss.getSheetByName("Tiempos_Procesado");
+      var responsablePausaFrutas = (params.responsable || "").toString().trim();
+      if (!responsablePausaFrutas) return json_(false, "Ingrese el responsable.");
       var filaFPausa = buscarFilaPorId_(sheetFPausa, params.idPedido);
       var filaTPausa = buscarFilaPorId_(sheetTPausa, params.idPedido);
       if (filaFPausa === -1 || filaTPausa === -1) return json_(false, "No se encontro el lote.");
@@ -1054,12 +1089,27 @@ function doPost(e) {
       sheetFPausa.getRange(filaFPausa, 9).setValue("Pausado");
       sheetTPausa.getRange(filaTPausa, 9).setValue(motivoActual ? motivoActual + " | " + motivoNuevo : motivoNuevo);
       sheetTPausa.getRange(filaTPausa, 10).setValue(ahoraPausa);
+      registrarBitacoraAccion_(ss, {
+        fechaHora: ahoraPausa,
+        modulo: "Frutas",
+        accion: "Pausar lote",
+        idPrincipal: params.idPedido,
+        idTecnico: sheetFPausa.getRange(filaFPausa, 16).getValue(),
+        responsable: responsablePausaFrutas,
+        detalle: {
+          motivo: params.motivoPausa || "Sin motivo",
+          estadoAnterior: estadoActualPausa,
+          estadoNuevo: "Pausado"
+        }
+      });
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (params.action === "retomarLoteFrutas") {
       var sheetFRetoma = ss.getSheetByName("Pedidos_Fruta");
       var sheetTRetoma = ss.getSheetByName("Tiempos_Procesado");
+      var responsableRetomaFrutas = (params.responsable || "").toString().trim();
+      if (!responsableRetomaFrutas) return json_(false, "Ingrese el responsable.");
       var filaFRetoma = buscarFilaPorId_(sheetFRetoma, params.idPedido);
       var filaTRetoma = buscarFilaPorId_(sheetTRetoma, params.idPedido);
       if (filaFRetoma === -1 || filaTRetoma === -1) return json_(false, "No se encontro el lote.");
@@ -1071,12 +1121,27 @@ function doPost(e) {
       sheetFRetoma.getRange(filaFRetoma, 9).setValue("En proceso");
       sheetTRetoma.getRange(filaTRetoma, 7).setValue(redondearMin_(pausadoPrevio));
       sheetTRetoma.getRange(filaTRetoma, 10).setValue("");
+      registrarBitacoraAccion_(ss, {
+        fechaHora: ahoraRetoma,
+        modulo: "Frutas",
+        accion: "Retomar lote",
+        idPrincipal: params.idPedido,
+        idTecnico: sheetFRetoma.getRange(filaFRetoma, 16).getValue(),
+        responsable: responsableRetomaFrutas,
+        detalle: {
+          tiempoPausadoMin: redondearMin_(pausadoPrevio),
+          estadoAnterior: "Pausado",
+          estadoNuevo: "En proceso"
+        }
+      });
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (params.action === "finalizarLoteFrutas") {
       var sheetFFin = ss.getSheetByName("Pedidos_Fruta");
       var sheetTFin = ss.getSheetByName("Tiempos_Procesado");
+      var responsableFinalFrutas = (params.responsable || "").toString().trim();
+      if (!responsableFinalFrutas) return json_(false, "Ingrese el responsable.");
       var filaFFin = buscarFilaPorId_(sheetFFin, params.idPedido);
       var filaTFin = buscarFilaPorId_(sheetTFin, params.idPedido);
       if (filaFFin === -1 || filaTFin === -1) return json_(false, "No se encontro el lote.");
@@ -1110,6 +1175,24 @@ function doPost(e) {
       sheetTFin.getRange(filaTFin, 8).setValue(redondearMin_(tiempoProduccion));
       sheetTFin.getRange(filaTFin, 10).setValue("");
       calcularMateriaPrima(params.idPedido);
+      registrarBitacoraAccion_(ss, {
+        fechaHora: ahoraFin,
+        modulo: "Frutas",
+        accion: "Finalizar lote",
+        idPrincipal: params.idPedido,
+        idTecnico: sheetFFin.getRange(filaFFin, 16).getValue(),
+        responsable: responsableFinalFrutas,
+        detalle: {
+          pesoEntradaLb: pesoEntradaFin,
+          pesoFinalLb: pesoFinalFin,
+          pesoAveriaLb: pesoAveriaFin,
+          pesoDesechoLb: pesoDesechoFin,
+          tiempoTotalMin: redondearMin_(tiempoTotal),
+          tiempoPausadoMin: redondearMin_(tiempoPausado),
+          tiempoProduccionMin: redondearMin_(tiempoProduccion)
+        },
+        nota: params.notaFinal || ""
+      });
       return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
     }
     // -- OPERATIVO: REGISTRO DE EMPAQUE --
@@ -1604,7 +1687,7 @@ function migrarEstructuraTecnica() {
 
 function asegurarEstructuraTecnica_(ss, forzar) {
   var properties = PropertiesService.getScriptProperties();
-  var clave = "MIGRACION_TECNICA_V4_" + ss.getId();
+  var clave = "MIGRACION_TECNICA_V5_" + ss.getId();
   if (!forzar && properties.getProperty(clave) === "OK") return;
 
   var sheetClientes = getOrCreateSheet_(ss, "Clientes", ["Codigo_Cliente", "Nombre_Cliente", "Visible_App", "ID_Cliente"]);
@@ -1676,6 +1759,8 @@ function asegurarEstructuraTecnica_(ss, forzar) {
 
   var sheetMovimientos = getOrCreateSheet_(ss, "Movimientos_Bodega", ["Fecha", "Tipo_Movimiento", "ID", "Producto", "Categoria", "Unidad", "Cantidad", "Stock_Anterior", "Stock_Nuevo", "Responsable", "Nota", "ID_Movimiento"]);
   completarIdsTecnicos_(sheetMovimientos, 12, 1);
+
+  getOrCreateSheet_(ss, "Bitacora_Acciones", ["FechaHora", "Modulo", "Accion", "ID_Principal", "ID_Tecnico", "Responsable", "Resultado", "Detalle_JSON", "Nota"]);
 
   var sheetProduccion = getOrCreateSheet_(ss, "Produccion_Areas", ["ID_Produccion", "Codigo_Produccion", "Fecha", "Area", "ID_Cliente", "Codigo_Cliente", "Cliente", "ID_Producto", "ID_Producto_Cliente", "Producto", "Presentacion", "Unidades_Funcionales", "Unidades_Averia", "Total_Fisico", "Funcionales_Disponibles", "Averia_Disponible", "Estado_Disponibilidad", "Responsable", "Nota", "Visible_App", "Unidad_Medida", "Cantidad_Disponible"]);
   var produccionData = sheetProduccion.getDataRange().getValues();
