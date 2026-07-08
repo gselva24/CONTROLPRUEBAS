@@ -4,7 +4,7 @@ function doGet(e) {
   asegurarEstructuraTecnica_(ss, false);
   var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], productos: [], productosCliente: [], pedidosCliente: [], detallePedidosCliente: [], asignacionesPedido: [], empaqueSesiones: [], produccionesAreas: [] };
   var appContext = e && e.parameter ? (e.parameter.app || "") : "";
-  var viewContext = e && e.parameter ? (e.parameter.view || "main") : "main";
+  var viewContext = e && e.parameter && e.parameter.view ? e.parameter.view : "full";
   var estadoContext = e && e.parameter ? (e.parameter.estado || "todos") : "todos";
   var limitContext = e && e.parameter ? numeroEnteroSeguro_(e.parameter.limit) : 0;
   var cacheKey = crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext);
