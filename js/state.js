@@ -15,6 +15,8 @@
         let bodegaNuevoMode = false;
         let historialAreaFiltro = "todos";
         let historialEstadoFiltro = "activos";
+        let loadedDataViews = {};
+        let currentViewName = "";
         
         let isRetomadoMode = false; 
         let timerInterval = null;

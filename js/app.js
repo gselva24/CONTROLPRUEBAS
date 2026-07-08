@@ -15,7 +15,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    fetchDataFromCloud();
     configureAppShell();
     switchView(typeof defaultAppView === "function" ? defaultAppView() : "home");
 });
@@ -27,6 +26,12 @@ function switchView(viewName) {
     document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
     const view = document.getElementById(`view-${viewName}`);
     if (view) view.classList.remove('hidden');
+    currentViewName = viewName;
+
+    if (typeof fetchDataView === "function") {
+        const dataView = typeof dataViewForAppView === "function" ? dataViewForAppView(viewName) : "main";
+        fetchDataView(dataView);
+    }
 }
 
 function configureAppShell() {

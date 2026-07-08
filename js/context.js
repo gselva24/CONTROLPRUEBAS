@@ -47,9 +47,15 @@ function defaultAppView() {
     return APP_CONFIG.defaultView;
 }
 
-function appApiUrl() {
+function appApiUrl(params = {}) {
+    const urlParams = new URLSearchParams({ app: APP_CONTEXT });
+    Object.keys(params).forEach(key => {
+        if (params[key] !== "" && typeof params[key] !== "undefined" && params[key] !== null) {
+            urlParams.set(key, params[key]);
+        }
+    });
     const separator = GOOGLE_SHEETS_URL.includes("?") ? "&" : "?";
-    return `${GOOGLE_SHEETS_URL}${separator}app=${encodeURIComponent(APP_CONTEXT)}`;
+    return `${GOOGLE_SHEETS_URL}${separator}${urlParams.toString()}`;
 }
 
 function isProductionOnlyApp() {
@@ -62,4 +68,11 @@ function appOrderArea() {
 
 function normalizarTextoFront(valor) {
     return (valor || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function dataViewForAppView(viewName) {
+    if (viewName === "pedidos") return "pedidos";
+    if (viewName === "historial") return "historial";
+    if (viewName === "empaque") return "empaque";
+    return "main";
 }

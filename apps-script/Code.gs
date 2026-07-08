@@ -4,6 +4,14 @@ function doGet(e) {
   asegurarEstructuraTecnica_(ss, false);
   var data = { frutas: [], pedidosPendientes: [], pedidosParciales: [], historial: [], inventarioBodega: [], movimientosBodega: [], clientes: [], productos: [], productosCliente: [], pedidosCliente: [], detallePedidosCliente: [], asignacionesPedido: [], empaqueSesiones: [], produccionesAreas: [] };
   var appContext = e && e.parameter ? (e.parameter.app || "") : "";
+  var viewContext = e && e.parameter && e.parameter.view ? e.parameter.view : "full";
+  var estadoContext = e && e.parameter ? (e.parameter.estado || "todos") : "todos";
+  var limitContext = e && e.parameter ? numeroEnteroSeguro_(e.parameter.limit) : 0;
+  var cacheKey = crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext);
+  var cachedPayload = leerCacheGet_(cacheKey);
+  if (cachedPayload) {
+    return ContentService.createTextOutput(cachedPayload).setMimeType(ContentService.MimeType.JSON);
+  }
 
   // 1. Cargar Opciones del Catálogo
   var sheetOpciones = ss.getSheetByName("Opciones");
@@ -313,18 +321,23 @@ function doGet(e) {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify(filtrarDataPorApp_(data, appContext))).setMimeType(ContentService.MimeType.JSON);
+  var payloadGet = filtrarDataPorApp_(data, appContext, viewContext, estadoContext, limitContext);
+  var jsonPayloadGet = JSON.stringify(payloadGet);
+  guardarCacheGet_(cacheKey, jsonPayloadGet, viewContext, estadoContext);
+  return ContentService.createTextOutput(jsonPayloadGet).setMimeType(ContentService.MimeType.JSON);
 }
 
-function filtrarDataPorApp_(data, appContext) {
+function filtrarDataPorApp_(data, appContext, viewContext, estadoContext, limitContext) {
   var contexto = normalizarTexto_(appContext || "");
   var filtrado = JSON.parse(JSON.stringify(data));
   filtrado.appContext = appContext || "full";
+  filtrado.viewContext = viewContext || "main";
+  filtrado.estadoContext = estadoContext || "todos";
 
   if (contexto === "frutas-empaque" || contexto === "frutasempaque") {
     filtrado.inventarioBodega = [];
     filtrado.movimientosBodega = [];
-    return filtrado;
+    return filtrarDataPorVista_(filtrado, viewContext, estadoContext, limitContext);
   }
 
   var areaObjetivo = "";
@@ -380,7 +393,133 @@ function filtrarDataPorApp_(data, appContext) {
   filtrado.historial = [];
   filtrado.inventarioBodega = [];
   filtrado.movimientosBodega = [];
+  return filtrarDataPorVista_(filtrado, viewContext, estadoContext, limitContext);
+}
+
+function filtrarDataPorVista_(data, viewContext, estadoContext, limitContext) {
+  var view = normalizarTexto_(viewContext || "main");
+  var estado = normalizarTexto_(estadoContext || "todos");
+  var limit = Math.max(0, numeroEnteroSeguro_(limitContext));
+  var filtrado = JSON.parse(JSON.stringify(data));
+
+  if (view === "main") {
+    delete filtrado.pedidosCliente;
+    delete filtrado.detallePedidosCliente;
+    delete filtrado.asignacionesPedido;
+    delete filtrado.empaqueSesiones;
+    delete filtrado.historial;
+    return filtrado;
+  }
+
+  if (view === "empaque") {
+    delete filtrado.pedidosParciales;
+    delete filtrado.historial;
+    delete filtrado.empaqueSesiones;
+    delete filtrado.asignacionesPedido;
+    delete filtrado.inventarioBodega;
+    delete filtrado.movimientosBodega;
+    return filtrado;
+  }
+
+  if (view === "pedidos") {
+    delete filtrado.pedidosPendientes;
+    delete filtrado.pedidosParciales;
+    delete filtrado.historial;
+    delete filtrado.empaqueSesiones;
+    delete filtrado.asignacionesPedido;
+    delete filtrado.inventarioBodega;
+    delete filtrado.movimientosBodega;
+    return filtrado;
+  }
+
+  if (view === "historial") {
+    filtrarPorEstadoOperativo_(filtrado, estado);
+    if (limit > 0) aplicarLimitHistorial_(filtrado, limit);
+    delete filtrado.frutas;
+    delete filtrado.clientes;
+    delete filtrado.productos;
+    delete filtrado.productosCliente;
+    delete filtrado.pedidosCliente;
+    delete filtrado.detallePedidosCliente;
+    delete filtrado.pedidosPendientes;
+    delete filtrado.pedidosParciales;
+    delete filtrado.inventarioBodega;
+    delete filtrado.movimientosBodega;
+    return filtrado;
+  }
+
   return filtrado;
+}
+
+function filtrarPorEstadoOperativo_(data, estado) {
+  if (estado === "todos") return;
+  var quiereCompletados = estado === "completados";
+  data.historial = (data.historial || []).filter(function(lote) {
+    return loteCompletadoFruta_(lote) === quiereCompletados;
+  });
+  data.produccionesAreas = (data.produccionesAreas || []).filter(function(lote) {
+    return loteCompletadoProduccion_(lote) === quiereCompletados;
+  });
+}
+
+function aplicarLimitHistorial_(data, limit) {
+  data.historial = (data.historial || []).slice(Math.max(0, data.historial.length - limit));
+  data.produccionesAreas = (data.produccionesAreas || []).slice(Math.max(0, data.produccionesAreas.length - limit));
+}
+
+function loteCompletadoFruta_(lote) {
+  return lote.estadoEmpaqueGlobal === "Empacado Total" || numeroSeguro_(lote.pesoDisponibleEmpaque) <= 0;
+}
+
+function loteCompletadoProduccion_(lote) {
+  return normalizarTexto_(lote.estadoDisponibilidad) === "agotado" || numeroSeguro_(lote.cantidadDisponible) <= 0;
+}
+
+function crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext) {
+  return [
+    "mes-v2",
+    normalizarTexto_(appContext || "full"),
+    normalizarTexto_(viewContext || "main"),
+    normalizarTexto_(estadoContext || "todos"),
+    String(limitContext || 0)
+  ].join(":").slice(0, 240);
+}
+
+function leerCacheGet_(cacheKey) {
+  try {
+    return CacheService.getScriptCache().get(cacheKey);
+  } catch (err) {
+    return null;
+  }
+}
+
+function guardarCacheGet_(cacheKey, payload, viewContext, estadoContext) {
+  try {
+    CacheService.getScriptCache().put(cacheKey, payload, ttlCacheGet_(viewContext, estadoContext));
+  } catch (err) {}
+}
+
+function ttlCacheGet_(viewContext, estadoContext) {
+  var view = normalizarTexto_(viewContext || "");
+  var estado = normalizarTexto_(estadoContext || "");
+  if (estado === "completados") return 180;
+  if (view === "pedidos") return 25;
+  return 30;
+}
+
+function limpiarCacheMes_() {
+  try {
+    var cache = CacheService.getScriptCache();
+    ["frutas-empaque", "planchas", "tamales", "full"].forEach(function(app) {
+      ["main", "empaque", "pedidos", "historial"].forEach(function(view) {
+        ["activos", "completados", "todos"].forEach(function(estado) {
+          [0, 50, 100].forEach(function(limit) {
+            cache.remove(crearCacheKeyGet_(app, view, estado, limit));
+          });
+        });
+      });
+    });
+  } catch (err) {}
 }
 
 function doPost(e) {
@@ -404,6 +543,7 @@ function doPost(e) {
     var params = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     asegurarEstructuraTecnica_(ss, false);
+    limpiarCacheMes_();
     
     // -- GERENCIA: ACTUALIZAR CATÁLOGO --
     if (params.action === "updateOptions") {

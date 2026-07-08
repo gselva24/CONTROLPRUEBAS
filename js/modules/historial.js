@@ -59,6 +59,10 @@ function setHistorialAreaFiltro(area) {
 
 function setHistorialEstadoFiltro(estado) {
     historialEstadoFiltro = estado;
+    if (typeof fetchDataView === "function") {
+        fetchDataView("historial", { estado, limit: estado === "completados" ? 100 : 50 });
+        return;
+    }
     renderMobileHistory();
 }
 
