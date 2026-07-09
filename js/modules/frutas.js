@@ -6,6 +6,8 @@
             document.getElementById('f-peso-dinamico-input').value = "";
             document.getElementById('f-peso-averia').value = "";
             document.getElementById('f-peso-desecho').value = "";
+            document.getElementById('f-cantidad-disponible').value = "";
+            document.getElementById('f-unidad-disponible').value = "lb";
             document.getElementById('f-nota-final').value = "";
             document.getElementById('f-pedido-parcial-select').value = "";
             document.getElementById('f-lote-info').classList.add('hidden');
@@ -59,11 +61,15 @@ function iniciarLoteFrutas() {
             const pesoFinal = Number(document.getElementById('f-peso-dinamico-input').value);
             const pesoAveria = Number(document.getElementById('f-peso-averia').value || 0);
             const pesoDesecho = Number(document.getElementById('f-peso-desecho').value || 0);
+            const unidadDisponible = document.getElementById('f-unidad-disponible').value.trim() || "lb";
+            const cantidadDisponibleInput = document.getElementById('f-cantidad-disponible').value;
+            const cantidadDisponible = cantidadDisponibleInput ? Number(cantidadDisponibleInput) : (unidadDisponible === "lb" ? pesoFinal : 0);
             if (!lote) { alert("Seleccione un lote."); return; }
             if (!responsable) { alert("Ingrese el responsable."); return; }
             if (!pesoFinal || pesoFinal <= 0) { alert("Ingrese el peso neto final."); return; }
             if (pesoFinal > Number(lote.pesoEntrada)) { alert("El peso final no puede superar el peso de entrada."); return; }
             if (pesoAveria < 0 || pesoDesecho < 0) { alert("Averia y desecho no pueden ser negativos."); return; }
+            if (!cantidadDisponible || cantidadDisponible <= 0) { alert("Ingrese la cantidad disponible para empaque."); return; }
             postFrutas({
                 action: "finalizarLoteFrutas",
                 idPedido: idPedido,
@@ -71,6 +77,8 @@ function iniciarLoteFrutas() {
                 pesoFinal: pesoFinal,
                 pesoAveria: pesoAveria,
                 pesoDesecho: pesoDesecho,
+                cantidadDisponibleEmpaque: cantidadDisponible,
+                unidadDisponibleEmpaque: unidadDisponible,
                 notaFinal: document.getElementById('f-nota-final').value.trim()
             }, "Lote finalizado.");
         }

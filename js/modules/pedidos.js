@@ -3,6 +3,7 @@ let pedidoDetalleExpandido = "";
 let pedidoClienteLineasId = "";
 let productosAdminExpandidos = false;
 let productoEditandoId = "";
+let pedidoEditandoId = "";
 
 function formatearFechaCargaPedido(valor) {
     if (!valor) return "Sin fecha";
@@ -15,6 +16,16 @@ function formatearFechaCargaPedido(valor) {
     const dia = String(fecha.getDate()).padStart(2, "0");
     const mes = String(fecha.getMonth() + 1).padStart(2, "0");
     return `${dia}-${mes}-${fecha.getFullYear()}`;
+}
+
+function fechaInputPedido(valor) {
+    if (!valor) return "";
+    const texto = String(valor);
+    const fechaSimple = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (fechaSimple) return `${fechaSimple[1]}-${fechaSimple[2]}-${fechaSimple[3]}`;
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return "";
+    return fecha.toISOString().slice(0, 10);
 }
 
 function toggleDetallePedido(idPedido) {
@@ -52,6 +63,16 @@ function setPedidosMode(mode) {
         fechaCarga.valueAsDate = new Date();
     }
     if (mode === 'productos') renderProductosAdmin();
+    actualizarEstadoFormularioPedido();
+}
+
+function actualizarEstadoFormularioPedido() {
+    const submitBtn = document.getElementById('p-submit-pedido-btn');
+    const cancelBtn = document.getElementById('p-cancel-edit-btn');
+    const clienteSelect = document.getElementById('p-cliente-select');
+    if (submitBtn) submitBtn.textContent = pedidoEditandoId ? "Actualizar pedido" : "Guardar pedido";
+    if (cancelBtn) cancelBtn.classList.toggle("hidden", !pedidoEditandoId);
+    if (clienteSelect) clienteSelect.disabled = Boolean(pedidoEditandoId);
 }
 
 function renderClientesSelect() {
@@ -427,6 +448,11 @@ function agregarLineaPedido() {
 }
 
 function eliminarLineaPedido(index) {
+    const linea = pedidoLineasForm[index];
+    if (pedidoEditandoId && Number(linea?.cantidadCompletada || 0) > 0) {
+        alert("No puede quitar una linea que ya tiene avance.");
+        return;
+    }
     pedidoLineasForm.splice(index, 1);
     renderPedidoLineasForm();
 }
@@ -435,20 +461,34 @@ function renderPedidoLineasForm() {
     const container = document.getElementById('p-lineas-form');
     container.innerHTML = pedidoLineasForm.length ? "" : `<p class="text-slate-500 text-center py-2">Agregue al menos una línea del armado.</p>`;
     pedidoLineasForm.forEach((linea, index) => {
+        const completada = Number(linea.cantidadCompletada || 0);
         container.innerHTML += `
             <div class="flex justify-between gap-3 bg-slate-900/70 border border-slate-700 rounded-xl p-3">
-                <div>
+                <div class="min-w-0">
                     <span class="block font-black text-slate-100">${linea.producto}</span>
                     <span class="block text-[10px] text-slate-400">${linea.presentacion || 'Sin presentación'} · ${linea.area}</span>
-                    <span class="block text-[10px] font-bold text-emerald-300">${linea.cantidadPedida} cajas</span>
+                    ${completada ? `<span class="block text-[10px] text-amber-300">Completado: ${completada} cajas</span>` : ""}
+                    <input type="number" min="${completada || 1}" step="1" inputmode="numeric" value="${linea.cantidadPedida}" oninput="actualizarCantidadLineaPedido(${index}, this.value)" class="mt-2 w-28 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs outline-none">
                 </div>
                 <button onclick="eliminarLineaPedido(${index})" class="text-rose-300 text-[10px] font-black uppercase">Quitar</button>
             </div>`;
     });
+    actualizarEstadoFormularioPedido();
+}
+
+function actualizarCantidadLineaPedido(index, value) {
+    const linea = pedidoLineasForm[index];
+    if (!linea) return;
+    const completada = Number(linea.cantidadCompletada || 0);
+    const cantidad = Math.floor(Number(value));
+    if (!Number.isFinite(cantidad) || cantidad <= 0) return;
+    linea.cantidadPedida = Math.max(cantidad, completada || 1);
 }
 
 function resetPedidoForm() {
+    pedidoEditandoId = "";
     document.getElementById('p-cliente-select').value = "";
+    document.getElementById('p-cliente-select').disabled = false;
     document.getElementById('p-fecha-carga').value = "";
     document.getElementById('p-nota').value = "";
     document.getElementById('p-linea-producto-cliente').value = "";
@@ -458,6 +498,38 @@ function resetPedidoForm() {
     pedidoClienteLineasId = "";
     renderPedidoLineasForm();
     actualizarInfoClientePedido();
+    actualizarEstadoFormularioPedido();
+}
+
+function editarPedidoClienteForm(idPedido) {
+    if (!isAdmin) { alert("Active modo gerente."); return; }
+    const pedido = pedidosCliente.find(p => p.idPedido === idPedido);
+    if (!pedido) return;
+    pedidoEditandoId = idPedido;
+    setPedidosMode("crear");
+    const clientePedido = clientesCatalog.find(c => c.idCliente === pedido.idCliente || c.codigo === pedido.codigoCliente) || null;
+    const clienteValue = clientePedido?.idCliente || pedido.idCliente || pedido.codigoCliente;
+    document.getElementById('p-cliente-select').value = clienteValue;
+    document.getElementById('p-cliente-select').disabled = true;
+    document.getElementById('p-fecha-carga').value = fechaInputPedido(pedido.fechaCarga);
+    document.getElementById('p-nota').value = pedido.nota || "";
+    pedidoClienteLineasId = clienteValue;
+    pedidoLineasForm = detallesDePedido(idPedido).map(detalle => ({
+        idLinea: detalle.idLinea || "",
+        idProductoCliente: detalle.idProductoCliente || "",
+        idProducto: detalle.idProducto || "",
+        area: detalle.area,
+        producto: detalle.producto,
+        presentacion: detalle.presentacion || "",
+        unidad: detalle.unidad || "cajas",
+        productoBaseProduccion: detalle.productoBaseProduccion || "",
+        cantidadPedida: Number(detalle.cantidadPedida || 0),
+        cantidadCompletada: Number(detalle.cantidadCompletada || 0),
+        nota: detalle.nota || ""
+    }));
+    renderPedidoLineasForm();
+    actualizarInfoClientePedido();
+    actualizarEstadoFormularioPedido();
 }
 
 function submitPedidoCliente() {
@@ -469,12 +541,13 @@ function submitPedidoCliente() {
     if (pedidoLineasForm.length === 0) { alert("Agregue al menos una línea al armado."); return; }
 
     postPedidos({
-        action: "crearPedidoCliente",
+        action: pedidoEditandoId ? "editarPedidoCliente" : "crearPedidoCliente",
+        idPedido: pedidoEditandoId,
         idCliente: cliente.idCliente,
         fechaCarga: fechaCarga,
         nota: document.getElementById('p-nota').value.trim(),
         lineas: pedidoLineasForm
-    }, "Pedido guardado.");
+    }, pedidoEditandoId ? "Pedido actualizado." : "Pedido guardado.");
 }
 
 function limpiarFormularioCatalogo(mode) {
@@ -514,7 +587,7 @@ function postPedidos(payload, successMessage, modeAfter = "lista") {
                 if (partes.length) mensaje += ` Se reincorporaron ${partes.join(" y ")} a sus fuentes.`;
             }
             alert(mensaje);
-            if (payload.action === "crearPedidoCliente") resetPedidoForm();
+            if (payload.action === "crearPedidoCliente" || payload.action === "editarPedidoCliente") resetPedidoForm();
             limpiarFormularioCatalogo(modeAfter);
             setPedidosMode(modeAfter);
             fetchDataFromCloud();
@@ -640,7 +713,8 @@ function renderPedidosCards() {
                         <h5 class="text-[9px] font-black uppercase text-slate-500">Detalle del armado</h5>
                     </div>
                     ${lineasHtml}
-                    <div class="grid grid-cols-3 gap-2 pt-1 ${isAdmin ? '' : 'hidden'}">
+                    <div class="grid grid-cols-4 gap-2 pt-1 ${isAdmin ? '' : 'hidden'}">
+                        <button onclick="editarPedidoClienteForm('${pedido.idPedido}')" class="bg-cyan-700 text-white text-[10px] font-bold py-2 rounded-lg">Editar</button>
                         <button onclick="ocultarPedidoCliente('${pedido.idPedido}')" class="bg-slate-700 text-white text-[10px] font-bold py-2 rounded-lg">Ocultar</button>
                         <button onclick="cancelarPedidoCliente('${pedido.idPedido}')" class="bg-amber-600 text-slate-950 text-[10px] font-black py-2 rounded-lg">Cancelar</button>
                         <button onclick="eliminarPedidoCliente('${pedido.idPedido}')" class="bg-rose-600 text-white text-[10px] font-black py-2 rounded-lg">Eliminar</button>

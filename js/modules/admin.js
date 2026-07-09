@@ -84,3 +84,71 @@
             }
         }
 
+        function gerenteOcultarProduccionArea(idProduccion) {
+            if (!isAdmin) { alert("Active modo gerente."); return; }
+            if (!idProduccion) return;
+            if (!confirm("¿Ocultar este lote de producción de la App? (Seguirá en Google Sheets)")) return;
+            fetch(GOOGLE_SHEETS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "ocultarProduccionArea", idProduccion })
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (resData && resData.status === "error") {
+                    alert("Error: " + resData.message);
+                    return;
+                }
+                fetchDataFromCloud();
+            })
+            .catch(err => { console.error(err); alert("Error al ocultar el lote de producción."); });
+        }
+
+        function gerenteBorrarProduccionArea(idProduccion) {
+            if (!isAdmin) { alert("Active modo gerente."); return; }
+            if (!idProduccion) return;
+            if (!confirm("¿Eliminar este lote de producción de Google Sheets? Solo se permitirá si no tiene uso en Empaque.")) return;
+            fetch(GOOGLE_SHEETS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "eliminarProduccionArea", idProduccion })
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (resData && resData.status === "error") {
+                    alert("Error: " + resData.message);
+                    return;
+                }
+                fetchDataFromCloud();
+            })
+            .catch(err => { console.error(err); alert("Error al eliminar el lote de producción."); });
+        }
+
+        function gerenteRevertirUsoProduccionArea(idProduccion) {
+            if (!isAdmin) { alert("Active modo gerente."); return; }
+            if (!idProduccion) return;
+            const motivo = prompt("Motivo de reversión del uso de este lote:");
+            if (!motivo) { alert("Ingrese el motivo de reversión."); return; }
+            fetch(GOOGLE_SHEETS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: "revertirUsoProduccionArea",
+                    idProduccion,
+                    motivo,
+                    responsable: "Gerente"
+                })
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (resData && resData.status === "error") {
+                    alert("Error: " + resData.message);
+                    return;
+                }
+                const cantidad = Number(resData.cantidadReincorporada || 0).toLocaleString("es-GT", { maximumFractionDigits: 2 });
+                alert(`Uso revertido. Se reincorporaron ${cantidad} ${resData.unidad || "unidad"}.`);
+                loadedDataViews = {};
+                fetchDataFromCloud({ force: true });
+            })
+            .catch(err => { console.error(err); alert("Error al revertir el uso del lote."); });
+        }

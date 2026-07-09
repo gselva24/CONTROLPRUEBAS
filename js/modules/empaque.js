@@ -85,6 +85,18 @@ function unidadFuenteProduccion(produccion) {
     return produccion?.unidadMedida || "unidad";
 }
 
+function cantidadDisponibleFruta(lote) {
+    if (!lote) return 0;
+    if (typeof lote.cantidadDisponibleEmpaque !== "undefined") {
+        return Number(lote.cantidadDisponibleEmpaque || 0);
+    }
+    return Number(lote.pesoDisponibleEmpaque || lote.pesoProcesado || 0);
+}
+
+function unidadFuenteFruta(lote) {
+    return lote?.unidadDisponibleEmpaque || "lb";
+}
+
 function renderEmpaqueLoteSelect() {
     const select = document.getElementById("e-lote-fruta-select");
     const pedidoSelect = document.getElementById("e-pedido-cliente-select");
@@ -106,6 +118,7 @@ function renderEmpaqueLoteSelect() {
             .filter(p => p.visibleApp !== "NO")
             .filter(p => normalizarAreaProduccion(p.area) === areaDetalle)
             .filter(p => cantidadDisponibleProduccion(p) > 0)
+            .filter(p => !p.estadoProduccion || p.estadoProduccion === "Finalizado")
             .slice()
             .reverse()
             .forEach(p => {
@@ -122,8 +135,9 @@ function renderEmpaqueLoteSelect() {
         .filter(p => p.visibleApp === "SI" && p.estadoFrutas === "Finalizado" && p.estadoEmpaqueGlobal !== "Empacado Total")
         .filter(p => !detalle || normalizarTextoFront(p.fruta) === normalizarTextoFront(detalle.productoBaseProduccion || detalle.producto))
         .forEach(p => {
-            const disponible = Number(p.pesoDisponibleEmpaque || p.pesoProcesado || 0);
-            select.innerHTML += `<option value="FRUTA|${p.id}">${p.id} - ${p.fruta} (${disponible} lb disp.)</option>`;
+            const disponible = cantidadDisponibleFruta(p);
+            const unidad = unidadFuenteFruta(p);
+            select.innerHTML += `<option value="FRUTA|${p.id}">${p.id} - ${p.fruta} (${disponible.toLocaleString("es-GT", { maximumFractionDigits: 2 })} ${unidad} disp.)</option>`;
         });
 }
 
@@ -140,13 +154,14 @@ function actualizarControlesFuenteEmpaque() {
     const produccion = esProduccion
         ? produccionesAreas.find(item => item.idProduccion === fuente.id)
         : null;
-    const unidad = esProduccion ? unidadFuenteProduccion(produccion) : "lb";
+    const lote = !esProduccion ? pedidosPendientes.find(item => item.id === fuente.id) : null;
+    const unidad = esProduccion ? unidadFuenteProduccion(produccion) : unidadFuenteFruta(lote);
     const medidaLabel = document.getElementById("e-medida-label");
     const medidaInput = document.getElementById("e-presentacion-lb");
     const usoWrapper = document.getElementById("e-uso-lote-wrapper");
     const sobranteLabel = document.getElementById("e-sobrante-label");
-    if (medidaLabel) medidaLabel.textContent = esProduccion ? `Contenido por caja (${unidad}):` : "Presentación (lb/caja):";
-    if (medidaInput) medidaInput.placeholder = esProduccion ? "48" : "10";
+    if (medidaLabel) medidaLabel.textContent = "Presentación:";
+    if (medidaInput) medidaInput.placeholder = esProduccion ? "Ej: Caja 12x4" : "Ej: Caja 10 lb / Bolsa";
     if (sobranteLabel) sobranteLabel.textContent = `Sobrante declarado del lote (${unidad}):`;
     if (usoWrapper) usoWrapper.classList.remove("hidden");
     actualizarCamposUsoLote();
@@ -169,14 +184,15 @@ function actualizarInfoEmpaque() {
         return;
     }
 
-    const disponibleLb = lote ? Number(lote.pesoDisponibleEmpaque || lote.pesoProcesado || 0) : 0;
+    const disponibleFruta = cantidadDisponibleFruta(lote);
+    const unidadFruta = unidadFuenteFruta(lote);
     const disponibleProduccion = cantidadDisponibleProduccion(produccion);
     const unidadProduccion = unidadFuenteProduccion(produccion);
     box.innerHTML = `
         ${pedido ? `<div><span class="text-slate-400">Pedido:</span> <span class="font-mono font-bold text-emerald-300">${pedido.idPedido}</span> · ${pedido.cliente}</div>` : ""}
         ${detalle ? `<div><span class="text-slate-400">Línea:</span> <span class="font-bold">${detalle.producto}</span> · ${detalle.presentacion || "Sin presentación"} (${detalle.cantidadCompletada}/${detalle.cantidadPedida} cajas)</div>` : ""}
         ${lote ? `<div><span class="text-slate-400">Lote fruta:</span> <span class="font-mono font-bold text-amber-300">${lote.id}</span> · ${lote.fruta}</div>
-        <div><span class="text-slate-400">Disponible:</span> <span class="font-black text-cyan-300">${disponibleLb} lb</span></div>` : ""}
+        <div><span class="text-slate-400">Disponible:</span> <span class="font-black text-cyan-300">${disponibleFruta.toLocaleString("es-GT", { maximumFractionDigits: 2 })} ${unidadFruta}</span></div>` : ""}
         ${produccion ? `<div><span class="text-slate-400">Producción:</span> <span class="font-mono font-bold text-sky-300">${produccion.codigoProduccion}</span> · ${produccion.area}</div>
         <div><span class="text-slate-400">Producto del lote:</span> ${produccion.producto}</div>
         <div><span class="text-slate-400">Cliente de origen:</span> ${produccion.cliente}</div>
@@ -210,7 +226,7 @@ function submitEmpaque() {
     const pedido = pedidosCliente.find(p => p.idPedido === document.getElementById("e-pedido-cliente-select").value);
     const detalle = buscarDetalleEmpaqueSeleccionado();
     const fuente = parseFuenteEmpaque(document.getElementById("e-lote-fruta-select").value);
-    const medidaPorCaja = Number(document.getElementById("e-presentacion-lb").value);
+    const presentacionRegistro = document.getElementById("e-presentacion-lb").value.trim();
     const cajas = Number(document.getElementById("e-cajas").value);
     const responsable = document.getElementById("e-responsable").value.trim();
     const nota = document.getElementById("e-nota").value.trim();
@@ -221,10 +237,7 @@ function submitEmpaque() {
     if (!detalle) { alert("Seleccione una línea del armado."); return; }
     if (!fuente.id) { alert("Seleccione una fuente disponible."); return; }
     if (!Number.isInteger(cajas) || cajas <= 0) { alert("Ingrese una cantidad válida de cajas hechas."); return; }
-    if (!medidaPorCaja || medidaPorCaja <= 0) {
-        alert(tipoFuenteDetalleEmpaque(detalle) === "Produccion" ? "Ingrese el contenido por caja." : "Ingrese la presentación en libras por caja.");
-        return;
-    }
+    if (!presentacionRegistro) { alert("Ingrese la presentación del registro."); return; }
     if (!responsable) { alert("Ingrese el responsable del registro."); return; }
     const cajasPendientes = Number(detalle.cantidadPedida || 0) - Number(detalle.cantidadCompletada || 0);
     if (cajas > cajasPendientes) {
@@ -241,6 +254,10 @@ function submitEmpaque() {
             alert("El lote seleccionado no pertenece al área responsable de esta línea.");
             return;
         }
+        if (produccion.estadoProduccion && produccion.estadoProduccion !== "Finalizado") {
+            alert("El lote seleccionado aun no esta finalizado.");
+            return;
+        }
         if (estadoUsoLote === "Empacado Parcial" && (sobranteFuente <= 0 || sobranteFuente >= disponibles)) {
             alert(`Ingrese un sobrante mayor a cero y menor a ${disponibles.toLocaleString("es-GT", { maximumFractionDigits: 2 })} ${unidadFuenteProduccion(produccion)}.`);
             return;
@@ -250,7 +267,7 @@ function submitEmpaque() {
             idPedidoCliente: pedido.idPedido,
             idLinea: detalle.idLinea,
             idProduccion: produccion.idProduccion,
-            cantidadPorCaja: medidaPorCaja,
+            presentacionRegistro,
             cajas,
             estadoUsoLote,
             sobranteFuente: estadoUsoLote === "Empacado Parcial" ? sobranteFuente : 0,
@@ -260,13 +277,13 @@ function submitEmpaque() {
         };
     } else {
         const lote = pedidosPendientes.find(p => p.id === fuente.id);
-        const sobranteLb = sobranteFuente;
+        const sobranteLote = sobranteFuente;
         if (!lote) { alert("Seleccione un lote de fruta disponible."); return; }
         if (normalizarTextoFront(lote.fruta) !== normalizarTextoFront(detalle.productoBaseProduccion || detalle.producto)) {
             alert("La fruta del lote no coincide con la fruta solicitada en el pedido.");
             return;
         }
-        if (estadoUsoLote === "Empacado Parcial" && (sobranteLb <= 0 || sobranteLb >= Number(lote.pesoDisponibleEmpaque || lote.pesoProcesado || 0))) {
+        if (estadoUsoLote === "Empacado Parcial" && (sobranteLote <= 0 || sobranteLote >= cantidadDisponibleFruta(lote))) {
             alert("Ingrese un sobrante mayor a cero y menor al disponible del lote.");
             return;
         }
@@ -281,13 +298,13 @@ function submitEmpaque() {
             productoDetalle: detalle.producto,
             presentacionDetalle: detalle.presentacion || "",
             unidadDetalle: detalle.unidad,
-            presentacionLb: medidaPorCaja,
+            presentacionRegistro,
             cajas,
             idLoteFruta: lote.id,
             idLoteTecnico: lote.idLoteTecnico || "",
             fruta: lote.fruta,
             estadoUsoLote,
-            sobranteLoteLb: estadoUsoLote === "Empacado Parcial" ? sobranteLb : 0,
+            sobranteFuente: estadoUsoLote === "Empacado Parcial" ? sobranteLote : 0,
             responsable,
             nota,
             fecha: new Date().toISOString()

@@ -39,7 +39,10 @@ function historialAreaVisible(area) {
 }
 
 function loteFrutaCompletado(lote) {
-    return lote.estadoEmpaqueGlobal === "Empacado Total" || Number(lote.pesoDisponibleEmpaque || 0) <= 0;
+    const disponible = typeof lote.cantidadDisponibleEmpaque !== "undefined"
+        ? Number(lote.cantidadDisponibleEmpaque || 0)
+        : Number(lote.pesoDisponibleEmpaque || 0);
+    return lote.estadoEmpaqueGlobal === "Empacado Total" || disponible <= 0;
 }
 
 function loteProduccionCompletado(lote) {
@@ -115,6 +118,8 @@ function renderMobileHistory() {
         const sesiones = sesionesDeLote(p.id);
         const cajasAsignadas = sesiones.reduce((total, s) => total + Number(s.cajasHechas || 0), 0);
         const pesoEmpacado = sesiones.reduce((total, s) => total + Number(s.pesoEmpacadoLb || 0), 0);
+        const cantidadDisponible = typeof p.cantidadDisponibleEmpaque !== "undefined" ? p.cantidadDisponibleEmpaque : p.pesoDisponibleEmpaque;
+        const unidadDisponible = p.unidadDisponibleEmpaque || "lb";
         const asignacionesHtml = sesiones.length
             ? [...sesiones].reverse().map(sesion => `
                 <div class="bg-slate-950/60 border border-slate-700/70 rounded-lg p-2.5">
@@ -145,7 +150,7 @@ function renderMobileHistory() {
                 </div>
                 <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-lg">
                     <span class="block text-[9px] uppercase font-black text-cyan-300">Disponible</span>
-                    <span class="block text-lg font-black text-slate-100">${numeroHistorial(p.pesoDisponibleEmpaque, 2)} <small class="text-[9px] text-slate-500">lb</small></span>
+                    <span class="block text-lg font-black text-slate-100">${numeroHistorial(cantidadDisponible, 2)} <small class="text-[9px] text-slate-500">${unidadDisponible}</small></span>
                 </div>
                 <div class="bg-slate-900/70 border border-slate-700 p-2.5 rounded-lg">
                     <span class="block text-[9px] uppercase font-black text-amber-300">Cajas registradas</span>
@@ -256,6 +261,11 @@ function renderHistorialProduccion(area, containerId) {
                 <div class="space-y-2">
                     <h4 class="text-[9px] font-black uppercase text-slate-400">Uso del lote</h4>
                     ${usoHtml}
+                </div>
+                <div class="${isAdmin ? 'grid' : 'hidden'} ${sesiones.length ? 'grid-cols-3' : 'grid-cols-2'} gap-2 pt-1">
+                    ${sesiones.length ? `<button type="button" onclick="gerenteRevertirUsoProduccionArea('${item.idProduccion}')" class="bg-amber-500 text-slate-950 text-[10px] font-black py-2.5 rounded-lg">Revertir uso</button>` : ""}
+                    <button type="button" onclick="gerenteOcultarProduccionArea('${item.idProduccion}')" class="bg-slate-700 text-white text-[10px] font-bold py-2.5 rounded-lg">Ocultar</button>
+                    <button type="button" onclick="gerenteBorrarProduccionArea('${item.idProduccion}')" class="bg-rose-600 text-white text-[10px] font-black py-2.5 rounded-lg">Eliminar</button>
                 </div>
             </article>`;
     }).join("");

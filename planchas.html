@@ -25,7 +25,24 @@
                     <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
                         <button onclick="switchView('home')" class="text-[10px] text-slate-400 font-bold flex items-center gap-1 hover:underline">Volver</button>
                         <h2 class="text-lg font-extrabold text-sky-400">Área de Planchas</h2>
-                        <p class="text-xs text-slate-400">Reporte de unidades terminadas destinadas a Empaque.</p>
+                        <p class="text-xs text-slate-400">Inicio, pausa, retoma y finalizacion de lotes destinados a Empaque.</p>
+
+                        <div class="bg-slate-900/60 p-2 rounded-xl flex gap-2 text-xs">
+                            <button id="pl-mode-new-btn" onclick="setProduccionMode('Planchas', 'nuevo')" class="flex-1 py-2 rounded-lg font-bold bg-sky-600 text-white">Iniciar lote</button>
+                            <button id="pl-mode-manage-btn" onclick="setProduccionMode('Planchas', 'gestionar')" class="flex-1 py-2 rounded-lg font-bold bg-slate-700 text-slate-300">Gestionar lote</button>
+                        </div>
+
+                        <div id="pl-gestion-panel" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-amber-400 mb-1">Lote activo o pausado:</label>
+                                <select id="pl-lote-select" onchange="actualizarLoteProduccion('Planchas')" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm text-amber-200"></select>
+                            </div>
+                            <div id="pl-lote-info" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="pl-pausar-btn" onclick="pausarProduccionArea('Planchas')" class="hidden bg-amber-500 text-slate-900 font-black py-3 rounded-xl text-xs uppercase">Pausar</button>
+                                <button id="pl-retomar-btn" onclick="retomarProduccionArea('Planchas')" class="hidden bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase">Retomar</button>
+                            </div>
+                        </div>
 
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Cliente destinatario:</label>
@@ -51,9 +68,11 @@
                             <strong id="pl-total" class="text-2xl text-sky-300">0</strong>
                             <span id="pl-total-unidad" class="text-xs text-slate-400"> unidades</span>
                         </div>
+                        <input id="pl-unidad-final" type="text" placeholder="Unidad final: unidad, bolsas, oz fl..." class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
                         <input id="pl-responsable" type="text" placeholder="Responsable" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm">
                         <textarea id="pl-nota" rows="2" placeholder="Nota / referencia" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm resize-none"></textarea>
-                        <button onclick="submitPlanchas()" class="w-full bg-sky-600 text-white font-black py-4 rounded-xl text-sm uppercase">Guardar reporte</button>
+                        <button id="pl-iniciar-btn" onclick="iniciarProduccionArea('Planchas')" class="w-full bg-sky-600 text-white font-black py-4 rounded-xl text-sm uppercase">Iniciar lote</button>
+                        <button id="pl-finalizar-btn" onclick="finalizarProduccionArea('Planchas')" class="hidden w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-sm uppercase">Finalizar lote</button>
                     </div>
                     <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-3">
                         <h3 class="text-xs font-black text-slate-300 uppercase">Producciones disponibles</h3>
@@ -135,7 +154,10 @@
                                 <div id="p-lineas-form" class="space-y-2 text-xs"></div>
                             </div>
 
-                            <button onclick="submitPedidoCliente()" class="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-sm uppercase shadow-lg shadow-emerald-900/30">Guardar pedido</button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="p-submit-pedido-btn" onclick="submitPedidoCliente()" class="bg-emerald-600 text-white font-black py-4 rounded-xl text-sm uppercase shadow-lg shadow-emerald-900/30">Guardar pedido</button>
+                                <button id="p-cancel-edit-btn" onclick="resetPedidoForm()" class="hidden bg-slate-700 text-white font-black py-4 rounded-xl text-sm uppercase">Cancelar edición</button>
+                            </div>
                         </div>
 
                         <div id="p-clientes-panel" class="hidden space-y-3">
