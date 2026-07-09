@@ -1,7 +1,7 @@
 const APP_CONTEXTS = {
     "frutas-empaque": {
         title: "Frutas + Empaque",
-        defaultView: "frutas",
+        defaultView: "home",
         views: ["home", "frutas", "empaque", "pedidos", "historial"],
         historyAreas: ["frutas", "planchas", "tamales"]
     },
