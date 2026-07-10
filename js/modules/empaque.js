@@ -160,9 +160,13 @@ function actualizarControlesFuenteEmpaque() {
     const medidaInput = document.getElementById("e-presentacion-lb");
     const usoWrapper = document.getElementById("e-uso-lote-wrapper");
     const sobranteLabel = document.getElementById("e-sobrante-label");
+    const averiaLabel = document.getElementById("e-averia-label");
+    const desechoLabel = document.getElementById("e-desecho-label");
     if (medidaLabel) medidaLabel.textContent = "Presentación:";
     if (medidaInput) medidaInput.placeholder = esProduccion ? "Ej: Caja 12x4" : "Ej: Caja 10 lb / Bolsa";
     if (sobranteLabel) sobranteLabel.textContent = `Sobrante declarado del lote (${unidad}):`;
+    if (averiaLabel) averiaLabel.textContent = `Averia de la sesion (${unidad}):`;
+    if (desechoLabel) desechoLabel.textContent = `Desecho de la sesion (${unidad}):`;
     if (usoWrapper) usoWrapper.classList.remove("hidden");
     actualizarCamposUsoLote();
 }
@@ -216,6 +220,8 @@ function resetEmpaqueForm() {
     document.getElementById("e-cajas").value = "";
     document.getElementById("e-estado-uso-lote").value = "Empacado Total";
     document.getElementById("e-sobrante-lb").value = "";
+    document.getElementById("e-averia-sesion").value = "0";
+    document.getElementById("e-desecho-sesion").value = "0";
     document.getElementById("e-responsable").value = "";
     document.getElementById("e-nota").value = "";
     document.getElementById("e-info-box").classList.add("hidden");
@@ -232,6 +238,8 @@ function submitEmpaque() {
     const nota = document.getElementById("e-nota").value.trim();
     const estadoUsoLote = document.getElementById("e-estado-uso-lote").value;
     const sobranteFuente = Number(document.getElementById("e-sobrante-lb").value || 0);
+    const averiaSesion = Number(document.getElementById("e-averia-sesion").value || 0);
+    const desechoSesion = Number(document.getElementById("e-desecho-sesion").value || 0);
 
     if (!pedido) { alert("Seleccione un pedido de cliente."); return; }
     if (!detalle) { alert("Seleccione una línea del armado."); return; }
@@ -239,6 +247,8 @@ function submitEmpaque() {
     if (!Number.isInteger(cajas) || cajas <= 0) { alert("Ingrese una cantidad válida de cajas hechas."); return; }
     if (!presentacionRegistro) { alert("Ingrese la presentación del registro."); return; }
     if (!responsable) { alert("Ingrese el responsable del registro."); return; }
+    if (!Number.isFinite(averiaSesion) || averiaSesion < 0) { alert("La averia debe ser cero o mayor."); return; }
+    if (!Number.isFinite(desechoSesion) || desechoSesion < 0) { alert("El desecho debe ser cero o mayor."); return; }
     const cajasPendientes = Number(detalle.cantidadPedida || 0) - Number(detalle.cantidadCompletada || 0);
     if (cajas > cajasPendientes) {
         alert(`La línea solo tiene ${cajasPendientes} cajas pendientes.`);
@@ -262,6 +272,11 @@ function submitEmpaque() {
             alert(`Ingrese un sobrante mayor a cero y menor a ${disponibles.toLocaleString("es-GT", { maximumFractionDigits: 2 })} ${unidadFuenteProduccion(produccion)}.`);
             return;
         }
+        const retiradoProduccion = disponibles - (estadoUsoLote === "Empacado Parcial" ? sobranteFuente : 0);
+        if (averiaSesion + desechoSesion >= retiradoProduccion) {
+            alert("La suma de averia y desecho debe ser menor que la cantidad retirada del lote.");
+            return;
+        }
         payload = {
             action: "registroEmpaqueProduccion",
             idPedidoCliente: pedido.idPedido,
@@ -271,6 +286,8 @@ function submitEmpaque() {
             cajas,
             estadoUsoLote,
             sobranteFuente: estadoUsoLote === "Empacado Parcial" ? sobranteFuente : 0,
+            averiaSesion,
+            desechoSesion,
             responsable,
             nota,
             fecha: new Date().toISOString()
@@ -285,6 +302,11 @@ function submitEmpaque() {
         }
         if (estadoUsoLote === "Empacado Parcial" && (sobranteLote <= 0 || sobranteLote >= cantidadDisponibleFruta(lote))) {
             alert("Ingrese un sobrante mayor a cero y menor al disponible del lote.");
+            return;
+        }
+        const retiradoFruta = cantidadDisponibleFruta(lote) - (estadoUsoLote === "Empacado Parcial" ? sobranteLote : 0);
+        if (averiaSesion + desechoSesion >= retiradoFruta) {
+            alert("La suma de averia y desecho debe ser menor que la cantidad retirada del lote.");
             return;
         }
         payload = {
@@ -305,6 +327,8 @@ function submitEmpaque() {
             fruta: lote.fruta,
             estadoUsoLote,
             sobranteFuente: estadoUsoLote === "Empacado Parcial" ? sobranteLote : 0,
+            averiaSesion,
+            desechoSesion,
             responsable,
             nota,
             fecha: new Date().toISOString()

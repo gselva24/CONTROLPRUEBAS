@@ -168,6 +168,17 @@
                             <input type="number" id="e-sobrante-lb" min="0.01" step="any" inputmode="decimal" placeholder="0.00" class="w-full px-4 py-3 bg-slate-900 border border-amber-600 rounded-xl text-sm outline-none">
                         </div>
 
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label id="e-averia-label" class="block text-xs font-bold uppercase text-amber-400 mb-1">Averia de la sesion:</label>
+                                <input type="number" id="e-averia-sesion" min="0" step="any" inputmode="decimal" value="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            </div>
+                            <div>
+                                <label id="e-desecho-label" class="block text-xs font-bold uppercase text-rose-400 mb-1">Desecho de la sesion:</label>
+                                <input type="number" id="e-desecho-sesion" min="0" step="any" inputmode="decimal" value="0" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 gap-3">
                             <input type="text" id="e-responsable" placeholder="Responsable" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
                             <input type="text" id="e-nota" placeholder="Nota / referencia" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm outline-none">
@@ -363,9 +374,9 @@
     <script src="js/api.js?v=20260708-viewfix"></script>
     <script src="js/modules/frutas.js?v=20260708-viewfix"></script>
     <script src="js/modules/produccion.js?v=20260708-viewfix"></script>
-    <script src="js/modules/empaque.js?v=20260708-viewfix"></script>
+    <script src="js/modules/empaque.js?v=20260710-mermas"></script>
     <script src="js/modules/pedidos.js?v=20260708-viewfix"></script>
-    <script src="js/modules/historial.js?v=20260708-viewfix"></script>
+    <script src="js/modules/historial.js?v=20260710-mermas"></script>
     <script src="js/modules/admin.js?v=20260708-viewfix"></script>
     <script src="js/app.js?v=20260708-viewfix"></script>
 </body>

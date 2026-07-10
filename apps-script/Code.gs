@@ -170,6 +170,9 @@ function doGet(e) {
           estadoFrutas: row[8],
           estadoEmpaqueGlobal: row[12],
           visibleApp: row[13],
+          pesoAveria: numeroSeguro_(row[9]),
+          pesoDesecho: numeroSeguro_(row[10]),
+          notaFinal: row[11] || "",
           pesoDisponibleEmpaque: row[14] !== "" && typeof row[14] !== "undefined" ? numeroSeguro_(row[14]) : pesoProcesado,
           idLoteTecnico: row[15] || "",
           cantidadDisponibleEmpaque: row[16] !== "" && typeof row[16] !== "undefined"
@@ -317,7 +320,11 @@ function doGet(e) {
           unidadFuente: sesionesData[se][34] || (sesionesData[se][11] ? "lb" : "unidad"),
           idProductoFuente: sesionesData[se][35] || "",
           idProductoDestino: sesionesData[se][36] || "",
-          presentacionRegistro: sesionesData[se][37] || sesionesData[se][7] || ""
+          presentacionRegistro: sesionesData[se][37] || sesionesData[se][7] || "",
+          cantidadFuenteUtilizada: numeroSeguro_(sesionesData[se][38] || sesionesData[se][33] || sesionesData[se][29]),
+          cantidadAveriaSesion: numeroSeguro_(sesionesData[se][39]),
+          cantidadDesechoSesion: numeroSeguro_(sesionesData[se][40]),
+          unidadMovimiento: sesionesData[se][41] || sesionesData[se][34] || (sesionesData[se][11] ? "lb" : "unidad")
         });
       }
     }
@@ -604,7 +611,7 @@ function loteCompletadoProduccion_(lote) {
 
 function crearCacheKeyGet_(appContext, viewContext, estadoContext, limitContext) {
   return [
-    "mes-v4",
+    "mes-v5",
     normalizarTexto_(appContext || "full"),
     normalizarTexto_(viewContext || "main"),
     normalizarTexto_(estadoContext || "todos"),
@@ -1585,10 +1592,13 @@ function doPost(e) {
       var presentacionLb = numeroSeguro_(params.presentacionLb);
       var presentacionRegistro = (params.presentacionRegistro || params.presentacionLb || "").toString().trim();
       var sobranteLote = numeroSeguro_(params.sobranteFuente || params.sobranteLoteLb);
+      var averiaSesionFruta = numeroSeguro_(params.averiaSesion);
+      var desechoSesionFruta = numeroSeguro_(params.desechoSesion);
       if (!params.idPedidoCliente) return json_(false, "Seleccione pedido de cliente.");
       if (!params.idLoteFruta) return json_(false, "Seleccione lote de fruta.");
       if (!cajasHechas || cajasHechas <= 0) return json_(false, "Ingrese cajas hechas.");
       if (!presentacionRegistro) return json_(false, "Ingrese la presentacion del registro.");
+      if (averiaSesionFruta < 0 || desechoSesionFruta < 0) return json_(false, "Averia y desecho no pueden ser negativos.");
       if (params.estadoUsoLote === "Empacado Parcial" && sobranteLote <= 0) return json_(false, "Ingrese sobrante del lote parcial.");
 
       var filaDetallePedido = params.idLinea
@@ -1639,6 +1649,12 @@ function doPost(e) {
       if (disponibleActual <= 0) return json_(false, "El lote seleccionado no tiene cantidad disponible.");
       if (params.estadoUsoLote === "Empacado Parcial" && sobranteLote >= disponibleActual) return json_(false, "El sobrante debe ser menor al disponible actual.");
 
+      var estadoUsoLote = params.estadoUsoLote === "Empacado Parcial" ? "Empacado Parcial" : "Empacado Total";
+      var nuevoDisponibleFruta = estadoUsoLote === "Empacado Total" ? 0 : sobranteLote;
+      var cantidadConsumidaFruta = Math.max(0, disponibleActual - nuevoDisponibleFruta);
+      var cantidadUtilizadaFruta = cantidadConsumidaFruta - averiaSesionFruta - desechoSesionFruta;
+      if (cantidadUtilizadaFruta <= 0) return json_(false, "Averia y desecho deben ser menores que la cantidad retirada del lote.");
+
       var cantidadPedidaDetalle = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 6).getValue());
       var cantidadCompletadaAnterior = numeroSeguro_(sheetDetallePedido.getRange(filaDetallePedido, 7).getValue());
       if (cajasHechas > cantidadPedidaDetalle - cantidadCompletadaAnterior) {
@@ -1651,9 +1667,6 @@ function doPost(e) {
       sheetDetallePedido.getRange(filaDetallePedido, 7).setValue(cantidadCompletadaDetalle);
       sheetDetallePedido.getRange(filaDetallePedido, 8).setValue(estadoDetalle);
 
-      var estadoUsoLote = params.estadoUsoLote === "Empacado Parcial" ? "Empacado Parcial" : "Empacado Total";
-      var nuevoDisponibleFruta = estadoUsoLote === "Empacado Total" ? 0 : sobranteLote;
-      var cantidadConsumidaFruta = Math.max(0, disponibleActual - nuevoDisponibleFruta);
       sheetFrutaEmpaque.getRange(filaLoteEmpaque, 13).setValue(estadoUsoLote);
       sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).setValue(unidadFuenteFruta === "lb" ? nuevoDisponibleFruta : (estadoUsoLote === "Empacado Total" ? 0 : sheetFrutaEmpaque.getRange(filaLoteEmpaque, 15).getValue()));
       sheetFrutaEmpaque.getRange(filaLoteEmpaque, 17).setValue(nuevoDisponibleFruta);
@@ -1706,7 +1719,11 @@ function doPost(e) {
         unidadFuenteFruta,
         "",
         sheetDetallePedido.getRange(filaDetallePedido, 14).getValue() || "",
-        presentacionRegistro
+        presentacionRegistro,
+        cantidadUtilizadaFruta,
+        averiaSesionFruta,
+        desechoSesionFruta,
+        unidadFuenteFruta
       ]);
       sheetAsignacionesEmpaque.appendRow([
         idAsignacionEmpaque,
@@ -1749,6 +1766,25 @@ function doPost(e) {
 
       recalcularEstadoPedidoCliente_(ss, params.idPedidoCliente);
       calcularMateriaPrima(params.idLoteFruta);
+      registrarBitacoraAccion_(ss, {
+        modulo: "Empaque",
+        accion: "Registrar uso lote fruta",
+        idPrincipal: idSesionEmpaque,
+        idTecnico: idLoteTecnicoGuardado,
+        responsable: params.responsable || "",
+        detalle: {
+          pedido: params.idPedidoCliente,
+          lote: params.idLoteFruta,
+          cajas: cajasHechas,
+          cantidadAnterior: disponibleActual,
+          cantidadUtilizada: cantidadUtilizadaFruta,
+          averia: averiaSesionFruta,
+          desecho: desechoSesionFruta,
+          sobrante: nuevoDisponibleFruta,
+          unidad: unidadFuenteFruta
+        },
+        nota: params.nota || ""
+      });
       return ContentService.createTextOutput(JSON.stringify({status: "success", idSesionEmpaque: idSesionEmpaque})).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1765,12 +1801,15 @@ function doPost(e) {
       var cantidadPorCajaProduccion = numeroSeguro_(params.cantidadPorCaja || params.unidadesPorCaja);
       var presentacionRegistroProduccion = (params.presentacionRegistro || params.presentacion || "").toString().trim();
       var sobranteFuenteProduccion = numeroSeguro_(params.sobranteFuente);
+      var averiaSesionProduccion = numeroSeguro_(params.averiaSesion);
+      var desechoSesionProduccion = numeroSeguro_(params.desechoSesion);
       var usoParcialProduccion = normalizarTexto_(params.estadoUsoLote).indexOf("parcial") !== -1;
       if (!params.idPedidoCliente || !params.idLinea) return json_(false, "Seleccione pedido y linea.");
       if (!params.idProduccion) return json_(false, "Seleccione una produccion disponible.");
       if (numeroSeguro_(params.cajas) !== cajasProduccion) return json_(false, "Las cajas deben ser un numero entero.");
       if (cajasProduccion <= 0) return json_(false, "Ingrese cajas validas.");
       if (!presentacionRegistroProduccion) return json_(false, "Ingrese la presentacion del registro.");
+      if (averiaSesionProduccion < 0 || desechoSesionProduccion < 0) return json_(false, "Averia y desecho no pueden ser negativos.");
 
       var filaDetalleProduccion = buscarFilaPorColumna_(sheetDetalleProduccion, 11, params.idLinea);
       var filaPedidoProduccion = buscarFilaPorId_(sheetPedidoProduccion, params.idPedidoCliente);
@@ -1831,6 +1870,8 @@ function doPost(e) {
       var nuevoDisponibleProduccion = usoParcialProduccion ? sobranteFuenteProduccion : 0;
       var cantidadConsumidaProduccion = disponibleProduccion - nuevoDisponibleProduccion;
       if (cantidadConsumidaProduccion <= 0) return json_(false, "La cantidad consumida debe ser mayor a cero.");
+      var cantidadUtilizadaProduccion = cantidadConsumidaProduccion - averiaSesionProduccion - desechoSesionProduccion;
+      if (cantidadUtilizadaProduccion <= 0) return json_(false, "Averia y desecho deben ser menores que la cantidad retirada del lote.");
       sheetFuenteProduccion.getRange(filaFuenteProduccion, 21).setValue(unidadFuenteProduccion);
       sheetFuenteProduccion.getRange(filaFuenteProduccion, 22).setValue(nuevoDisponibleProduccion);
       actualizarEstadoDisponibilidadProduccion_(sheetFuenteProduccion, filaFuenteProduccion);
@@ -1882,7 +1923,11 @@ function doPost(e) {
         unidadFuenteProduccion,
         idProductoFuenteProduccion,
         idProductoDetalleProduccion,
-        presentacionRegistroProduccion
+        presentacionRegistroProduccion,
+        cantidadUtilizadaProduccion,
+        averiaSesionProduccion,
+        desechoSesionProduccion,
+        unidadFuenteProduccion
       ]);
       sheetAsignacionesProduccion.appendRow([
         idAsignacionProduccion,
@@ -1906,6 +1951,26 @@ function doPost(e) {
       ]);
 
       recalcularEstadoPedidoCliente_(ss, params.idPedidoCliente);
+      registrarBitacoraAccion_(ss, {
+        modulo: "Empaque",
+        accion: "Registrar uso lote produccion",
+        idPrincipal: idSesionProduccionEmpaque,
+        idTecnico: params.idProduccion,
+        responsable: params.responsable || "",
+        detalle: {
+          pedido: params.idPedidoCliente,
+          lote: codigoFuenteProduccion,
+          areaFuente: areaFuenteProduccion,
+          cajas: cajasProduccion,
+          cantidadAnterior: disponibleProduccion,
+          cantidadUtilizada: cantidadUtilizadaProduccion,
+          averia: averiaSesionProduccion,
+          desecho: desechoSesionProduccion,
+          sobrante: nuevoDisponibleProduccion,
+          unidad: unidadFuenteProduccion
+        },
+        nota: params.nota || ""
+      });
       return ContentService.createTextOutput(JSON.stringify({
         status: "success",
         idSesionEmpaque: idSesionProduccionEmpaque,
@@ -2145,12 +2210,12 @@ function headersProduccionAreas_() {
 }
 
 function headersEmpaqueSesiones_() {
-  return ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino", "Presentacion_Registro"];
+  return ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino", "Presentacion_Registro", "Cantidad_Fuente_Utilizada", "Cantidad_Averia_Sesion", "Cantidad_Desecho_Sesion", "Unidad_Movimiento"];
 }
 
 function asegurarEstructuraTecnica_(ss, forzar) {
   var properties = PropertiesService.getScriptProperties();
-  var clave = "MIGRACION_TECNICA_V6_" + ss.getId();
+  var clave = "MIGRACION_TECNICA_V7_" + ss.getId();
   if (!forzar && properties.getProperty(clave) === "OK") return;
 
   var sheetClientes = getOrCreateSheet_(ss, "Clientes", ["Codigo_Cliente", "Nombre_Cliente", "Visible_App", "ID_Cliente"]);
@@ -2293,18 +2358,30 @@ function asegurarEstructuraTecnica_(ss, forzar) {
       cantidadConsumidaMigrada = numeroEnteroSeguro_(sesionesData[s][9]) * numeroSeguro_(sesionesData[s][10]);
     }
     var cantidadSobranteMigrada = numeroSeguro_(sesionesData[s][32] || sesionesData[s][14]);
+    var cantidadAnteriorMigrada = sesionesData[s][31] !== "" && typeof sesionesData[s][31] !== "undefined"
+      ? numeroSeguro_(sesionesData[s][31])
+      : cantidadConsumidaMigrada + cantidadSobranteMigrada;
     var unidadFuenteMigrada = sesionesData[s][34] || (esProduccionMigrada ? produccionTecnica.unidad || "unidad" : "lb");
     var idProductoFuenteMigrado = sesionesData[s][35] || (esProduccionMigrada ? produccionTecnica.idProducto || "" : "");
     var idProductoDestinoMigrado = sesionesData[s][36] || detalleSesion[13] || "";
     sheetSesiones.getRange(s + 1, 25).setValue(tipoFuenteMigrada);
     sheetSesiones.getRange(s + 1, 31, 1, 7).setValues([[
       cantidadPorCajaMigrada,
-      sesionesData[s][31] || "",
+      cantidadAnteriorMigrada,
       cantidadSobranteMigrada,
       cantidadConsumidaMigrada,
       unidadFuenteMigrada,
       idProductoFuenteMigrado,
       idProductoDestinoMigrado
+    ]]);
+    var cantidadUtilizadaMigrada = sesionesData[s][38] !== "" && typeof sesionesData[s][38] !== "undefined"
+      ? numeroSeguro_(sesionesData[s][38])
+      : cantidadConsumidaMigrada;
+    sheetSesiones.getRange(s + 1, 39, 1, 4).setValues([[
+      cantidadUtilizadaMigrada,
+      numeroSeguro_(sesionesData[s][39]),
+      numeroSeguro_(sesionesData[s][40]),
+      sesionesData[s][41] || unidadFuenteMigrada
     ]]);
 
     if (!asignacionesExistentes[idAsignacion]) {
@@ -2583,7 +2660,7 @@ function revertirAsignacionesPedidoCliente_(ss, idPedido, motivo) {
   if (!idPedido) return [];
   var sheetSesiones = ss.getSheetByName("Empaque_Sesiones");
   if (!sheetSesiones) return [];
-  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", ["ID_Sesion_Empaque", "Fecha", "ID_Pedido_Cliente", "Cliente", "Codigo_Cliente", "Area_Detalle", "Producto_Detalle", "Presentacion_Detalle", "Unidad", "Cajas_Hechas", "Presentacion_Lb", "ID_Lote_Fruta", "Fruta", "Estado_Uso_Lote", "Sobrante_Lote_Lb", "Responsable", "Nota", "Estado_Registro", "Fecha_Reversion", "Motivo_Reversion", "ID_Linea", "ID_Asignacion", "ID_Lote_Tecnico", "ID_Pedido_Tecnico", "Tipo_Fuente", "ID_Produccion", "Codigo_Produccion", "Categoria_Unidades", "Unidades_Por_Caja", "Unidades_Consumidas", "Cantidad_Por_Caja", "Cantidad_Fuente_Anterior", "Cantidad_Fuente_Sobrante", "Cantidad_Fuente_Consumida", "Unidad_Fuente", "ID_Producto_Fuente", "ID_Producto_Destino"]);
+  sheetSesiones = getOrCreateSheet_(ss, "Empaque_Sesiones", headersEmpaqueSesiones_());
 
   var dataSesiones = sheetSesiones.getDataRange().getValues();
   var lotesAReincorporar = {};
